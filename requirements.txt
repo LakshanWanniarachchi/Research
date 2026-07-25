@@ -1,0 +1,9 @@
+# Python libraries needed to train the Normal-vs-MI ECG model.
+# Install with:  pip install -r requirements.txt
+numpy
+pandas
+scipy
+wfdb
+scikit-learn
+matplotlib
+tensorflow
