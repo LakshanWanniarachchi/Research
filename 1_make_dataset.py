@@ -32,10 +32,35 @@ import wfdb
 # script's own location so it works no matter where you run it from.
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(HERE)
-DATA_DIR = os.path.join(
-    PROJECT_ROOT,
-    "ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3",
-)
+DATASET_NAME = "ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3"
+
+# Unzipping the download sometimes creates an extra folder level, so the real
+# files end up at  <name>/<name>/ptbxl_database.csv  instead of <name>/... .
+# Rather than guess, look for the file that must be there and use whichever
+# layout we actually find.
+def find_data_dir():
+    """Return the folder that really contains ptbxl_database.csv."""
+    candidates = [
+        os.path.join(PROJECT_ROOT, DATASET_NAME),                  # normal
+        os.path.join(PROJECT_ROOT, DATASET_NAME, DATASET_NAME),    # double-nested
+        os.path.join(HERE, DATASET_NAME),                          # next to this script
+        PROJECT_ROOT,
+    ]
+    for path in candidates:
+        if os.path.exists(os.path.join(path, "ptbxl_database.csv")):
+            return path
+
+    # Nothing matched - give a message that says exactly what to do.
+    looked = "\n".join("    " + c for c in candidates)
+    raise FileNotFoundError(
+        "Could not find 'ptbxl_database.csv'.\n"
+        f"Looked in:\n{looked}\n\n"
+        "Make sure the PTB-XL dataset is unzipped and that the folder\n"
+        "containing ptbxl_database.csv sits next to this project folder."
+    )
+
+
+DATA_DIR = find_data_dir()
 
 OUT_DIR = os.path.join(HERE, "data")          # where the .npy files go
 os.makedirs(OUT_DIR, exist_ok=True)

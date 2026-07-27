@@ -1,0 +1,25 @@
+{
+  "task": "PTB-XL Lead I, Normal (0) vs Myocardial Infarction (1)",
+  "type": "ensemble",
+  "members": [
+    "model_seed42.keras",
+    "model_seed43.keras",
+    "model_seed44.keras",
+    "model_seed45.keras",
+    "model_seed46.keras"
+  ],
+  "combine": "mean of the 5 predicted probabilities",
+  "sample_rate_hz": 100,
+  "input_length": 1000,
+  "preprocessing": "per-recording z-score: (x - mean) / (std + 1e-8)",
+  "augmentation": "train only: time shift +/-1s, baseline wander 0.15-0.5Hz, gaussian noise sd<=0.05, then re-z-score",
+  "threshold_default": 0.5,
+  "threshold_best_f1": 0.5285,
+  "threshold_high_recall": 0.2974,
+  "split": {
+    "train": "folds 1-8",
+    "val": "fold 9",
+    "test": "fold 10"
+  },
+  "test_roc_auc": 0.9076
+}

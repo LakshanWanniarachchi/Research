@@ -1,0 +1,19 @@
+{
+  "task": "PTB-XL Lead I, Normal (0) vs Myocardial Infarction (1)",
+  "sample_rate_hz": 100,
+  "input_length": 1000,
+  "preprocessing": "per-recording z-score: (x - mean) / (std + 1e-8)",
+  "threshold_default": 0.5,
+  "threshold_best_f1": 0.3136,
+  "threshold_high_recall": 0.1406,
+  "split": {
+    "train": "folds 1-8",
+    "val": "fold 9",
+    "test": "fold 10"
+  },
+  "n_train": 11622,
+  "n_val": 1454,
+  "n_test": 1462,
+  "epochs_run": 19,
+  "seed": 42
+}

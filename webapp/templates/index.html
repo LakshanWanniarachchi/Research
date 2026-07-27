@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECG Heart Attack Detection — Test Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #0e1117; color: #e6edf3;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header { border-bottom: 1px solid #30363d; padding-bottom: 14px; margin-bottom: 20px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .sub { color: #8b949e; font-size: 13px; }
+  .note {
+    background: #1c2128; border-left: 3px solid #d29922; padding: 8px 12px;
+    margin-top: 12px; font-size: 12px; color: #c9d1d9; border-radius: 0 4px 4px 0;
+  }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; align-items: center; }
+  button {
+    background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+    padding: 9px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { background: #30363d; }
+  button.mi     { border-color: #6e2a2a; }
+  button.normal { border-color: #2a5c3f; }
+  button:disabled { opacity: .5; cursor: wait; }
+
+  .modes { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .modes span { font-size: 12px; color: #8b949e; margin-right: 4px; }
+  .mode-btn { padding: 6px 11px; font-size: 12px; }
+  .mode-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+
+  canvas { width: 100%; height: 240px; background: #fff; border-radius: 8px; display: block; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 12px; text-transform: uppercase;
+             letter-spacing: .06em; color: #8b949e; font-weight: 600; }
+
+  .verdict { font-size: 25px; font-weight: 700; margin-bottom: 4px; }
+  .verdict.mi     { color: #f85149; }
+  .verdict.normal { color: #3fb950; }
+  .muted { color: #8b949e; font-size: 12px; }
+
+  .bar-wrap { margin-top: 14px; }
+  .bar { position: relative; height: 26px; background: #21262d;
+         border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, #3fb950, #d29922, #f85149);
+              transition: width .3s; }
+  .bar-thr { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #58a6ff; }
+  .bar-labels { display: flex; justify-content: space-between; font-size: 11px;
+                color: #8b949e; margin-top: 5px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 6px 0; border-bottom: 1px solid #21262d; }
+  td:first-child { color: #8b949e; width: 42%; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 20px;
+         font-size: 12px; font-weight: 600; }
+  .tag.ok   { background: #12261a; color: #3fb950; border: 1px solid #2a5c3f; }
+  .tag.bad  { background: #2b1416; color: #f85149; border: 1px solid #6e2a2a; }
+  .report { font-size: 12px; color: #8b949e; font-style: italic;
+            margin-top: 10px; line-height: 1.45; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>ECG Heart Attack Detection — Test Dashboard</h1>
+    <div class="sub">
+      1D CNN · Lead I · 100 Hz · simulation mode · <strong>{{ model_name }}</strong>
+    </div>
+    <div class="note">
+      <strong>Simulation mode.</strong> The ESP32 hardware is not connected. Recordings are
+      replayed from <strong>fold 10 ({{ n_test }} records)</strong> — the test fold the model
+      never saw during training — and pass through the same preprocessing and the same
+      model call the live device will use.
+      Research prototype, not a medical device.
+    </div>
+  </header>
+
+  <div class="controls">
+    <button class="mi"     onclick="load('mi')">Random heart attack case</button>
+    <button class="normal" onclick="load('normal')">Random normal case</button>
+    <button onclick="load('any')">Random (either)</button>
+
+    <div class="modes">
+      <span>Operating point:</span>
+      <button class="mode-btn" data-mode="default"     onclick="setMode('default')">Default 0.50</button>
+      <button class="mode-btn" data-mode="best_f1"     onclick="setMode('best_f1')">Best-F1 0.31</button>
+      <button class="mode-btn active" data-mode="high_recall" onclick="setMode('high_recall')">High-recall 0.14</button>
+    </div>
+  </div>
+
+  <canvas id="ecg" width="2000" height="480"></canvas>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Model output</h2>
+      <div id="verdict" class="verdict muted">— press a button to start —</div>
+      <div id="probtext" class="muted"></div>
+
+      <div class="bar-wrap">
+        <div class="bar">
+          <div id="barfill" class="bar-fill" style="width:0%"></div>
+          <div id="barthr" class="bar-thr" style="left:0%"></div>
+        </div>
+        <div class="bar-labels">
+          <span>0.0 — certainly normal</span>
+          <span style="color:#58a6ff">│ threshold</span>
+          <span>1.0 — certainly MI</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ground truth (from the dataset)</h2>
+      <table>
+        <tr><td>Actual diagnosis</td><td id="truth">—</td></tr>
+        <tr><td>Model was</td><td id="correct">—</td></tr>
+        {% if has_meta %}
+        <tr><td>Record ID</td><td id="ecgid">—</td></tr>
+        <tr><td>Patient</td><td id="patient">—</td></tr>
+        <tr><td>MI type</td><td id="subclass">—</td></tr>
+        {% endif %}
+      </table>
+      <div id="report" class="report"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let mode = "high_recall";
+let latest = null;
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll(".mode-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.mode === m));
+  // Re-score the recording already on screen so the effect of the threshold
+  // is visible without fetching a different patient.
+  if (latest) rescore();
+}
+
+function rescore() {
+  fetch("/api/predict", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({signal: latest.signal, mode: mode})
+  }).then(r => r.json()).then(v => {
+    latest.threshold = v.threshold;
+    latest.prediction = v.prediction;
+    latest.label = v.label;
+    latest.correct = (v.prediction === latest.truth);
+    show(latest);
+  });
+}
+
+function load(type) {
+  document.querySelectorAll("button").forEach(b => b.disabled = true);
+  fetch(`/api/record?type=${type}&mode=${mode}`)
+    .then(r => r.json())
+    .then(d => { latest = d; show(d); draw(d.signal); })
+    .finally(() => document.querySelectorAll("button").forEach(b => b.disabled = false));
+}
+
+function show(d) {
+  const isMI = d.prediction === 1;
+  const v = document.getElementById("verdict");
+  v.textContent = d.label;
+  v.className = "verdict " + (isMI ? "mi" : "normal");
+
+  document.getElementById("probtext").textContent =
+    `probability of MI = ${d.probability.toFixed(4)}   ·   threshold = ${d.threshold.toFixed(2)}`;
+
+  document.getElementById("barfill").style.width = (d.probability * 100) + "%";
+  document.getElementById("barthr").style.left = (d.threshold * 100) + "%";
+
+  document.getElementById("truth").textContent = d.truth_label;
+  document.getElementById("correct").innerHTML = d.correct
+    ? '<span class="tag ok">CORRECT</span>'
+    : `<span class="tag bad">WRONG — ${d.truth === 1 ? "missed a heart attack" : "false alarm"}</span>`;
+
+  if (document.getElementById("ecgid")) {
+    document.getElementById("ecgid").textContent = d.ecg_id ?? "—";
+    document.getElementById("patient").textContent =
+      (d.age ? d.age + " yrs" : "age unknown") + (d.sex ? ", " + d.sex : "");
+    document.getElementById("subclass").textContent = d.subclass || "— (not an MI record)";
+  }
+  document.getElementById("report").textContent =
+    d.report ? "Clinician's note: " + d.report : "";
+}
+
+function draw(sig) {
+  const c = document.getElementById("ecg"), x = c.getContext("2d");
+  const W = c.width, H = c.height;
+  x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
+
+  // ECG-paper style grid: a small square every 0.04 s, a bold one every 0.2 s.
+  const px = W / 1000;                 // pixels per sample (1000 samples = 10 s)
+  for (let i = 0; i <= 1000; i += 4) {
+    const bold = i % 20 === 0;
+    x.strokeStyle = bold ? "#f0a0a0" : "#f8d7d7";
+    x.lineWidth = bold ? 1 : 0.5;
+    x.beginPath(); x.moveTo(i * px, 0); x.lineTo(i * px, H); x.stroke();
+  }
+  for (let yy = 0; yy <= H; yy += H / 20) {
+    const bold = Math.round(yy / (H / 20)) % 5 === 0;
+    x.strokeStyle = bold ? "#f0a0a0" : "#f8d7d7";
+    x.lineWidth = bold ? 1 : 0.5;
+    x.beginPath(); x.moveTo(0, yy); x.lineTo(W, yy); x.stroke();
+  }
+
+  // Scale the trace to fill the box neatly.
+  const lo = Math.min(...sig), hi = Math.max(...sig), range = (hi - lo) || 1;
+  x.strokeStyle = "#111"; x.lineWidth = 2; x.beginPath();
+  sig.forEach((v, i) => {
+    const yy = H - ((v - lo) / range) * (H * 0.86) - H * 0.07;
+    i ? x.lineTo(i * px, yy) : x.moveTo(i * px, yy);
+  });
+  x.stroke();
+
+  x.fillStyle = "#666"; x.font = "20px sans-serif";
+  x.fillText("Lead I · 10 seconds · 100 Hz", 14, 30);
+}
+</script>
+</body>
+</html>
