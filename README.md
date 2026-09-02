@@ -155,6 +155,52 @@ examiner will look for:
 
 ---
 
+## Running the web app (testing the model)
+
+This is the "simulation mode" from the thesis system diagram: it replays real ECG
+recordings through the same code path the ESP32 will use once the hardware is ready.
+
+```
+cd webapp
+python app.py
+```
+
+Then open **http://127.0.0.1:5000**. Startup takes 20–30 seconds (TensorFlow, the
+models, and the dataset all load once). Press `Ctrl + C` to stop.
+
+**What it needs** (all should already be in the project root):
+
+| File / folder | Purpose |
+|---|---|
+| `mi_cnn_model.keras` + `model_config.json` | the single baseline model |
+| `ensemble/` (5 × `.keras` + `ensemble_config.json`) | the 5-model ensemble — used automatically if present |
+| `data/ptbxl_leadI.npz` | the recordings replayed in simulation mode |
+
+If the ensemble folder is missing the app falls back to the single model and says so
+in the page header, so you always know which one you are looking at.
+
+**Using it:** the buttons pull a random heart-attack or normal recording from
+**fold 10 only** — the test fold the model never trained on. Demoing on training data
+would give falsely confident results. The dashboard shows the ECG trace, the model's
+probability, the threshold, and the true diagnosis so you can see whether it was right.
+The operating-point buttons re-score the *same* recording, so you can watch the
+verdict change as the threshold moves.
+
+### The endpoint the ESP32 will use
+
+```
+POST /api/predict     {"signal": [ ...1000 numbers... ], "mode": "high_recall"}
+  -> {"probability": 0.83, "threshold": 0.2974, "prediction": 1, "label": "MI PATTERN DETECTED"}
+
+GET  /api/health      check the server is up and see which model is loaded
+```
+
+The signal must be exactly **1000 samples** (10 seconds at 100 Hz) of Lead I. The
+server does the z-scoring itself, so send the raw values. Server-side prediction
+takes about **0.35 s** with the 5-model ensemble.
+
+---
+
 ## How to read the results
 
 - **Accuracy** — overall, how many predictions were correct.
