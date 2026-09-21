@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% set active = 'live' %}
+{% block title %}Live ECG &middot; ECG Screening System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Live ECG</h1>
+  <span class="sub">Streamed from the device over Wi-Fi and MQTT.</span>
+</div>
+
+{% if not devices %}
+<div class="card">
+  <h2>No device linked</h2>
+  <p class="empty">
+    Link your ESP32 on the <a href="{{ url_for('account.devices') }}">Devices</a>
+    page first. Until then there is nothing for this page to show.
+  </p>
+</div>
+{% else %}
+
+<div class="card">
+  <h2>Device</h2>
+  <div class="form-row">
+    <div class="field" style="min-width:220px; margin-bottom:0">
+      <label for="device">Device</label>
+      <select id="device">
+        {% for d in devices %}
+        <option value="{{ d["device_id"] }}" {% if d["device_id"] == selected %}selected{% endif %}>
+          {{ d["device_id"] }}{% if d["label"] %} — {{ d["label"] }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="min-width:210px; margin-bottom:0">
+      <label for="mode">Operating point</label>
+      <select id="mode">
+        <option value="default">default</option>
+        <option value="best_f1">best_f1</option>
+        <option value="high_recall" selected>high_recall</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <span class="pill off" id="deviceState">waiting</span>
+      <span class="pill off" id="brokerState">broker ?</span>
+    </div>
+  </div>
+  <div class="note" id="modeNote" style="margin-top:10px">
+    The operating point moves the threshold only; the model and the probability
+    are the same either way. <span class="mono">high_recall</span> is tuned to
+    miss as few infarctions as possible and flags about a third of healthy
+    recordings; <span class="mono">default</span> (0.5) is the balanced point.
+    It applies to the next window scored, never to one already stored.
+  </div>
+</div>
+
+<div class="card">
+  <h2>Waveform &mdash; raw ADC counts, 100 Hz, last 10 seconds</h2>
+  <div class="ecg-wrap">
+    <canvas class="ecg" id="ecg"></canvas>
+  </div>
+  <div class="ecg-note" id="diagnosis">Waiting for data from the device…</div>
+
+  <div class="grid kpi" style="margin-top:16px">
+    <div class="tile"><div class="k">Electrodes</div><div class="v" id="leadState">—</div></div>
+    <div class="tile"><div class="k">Signal</div><div class="v" id="sigState">—</div></div>
+    <div class="tile"><div class="k">Heart rate</div><div class="v" id="bpm">—</div>
+      <div class="u">from QRS spacing</div></div>
+    <div class="tile"><div class="k">Sampling rate</div><div class="v" id="rate">—</div>
+      <div class="u">device clock</div></div>
+    <div class="tile"><div class="k">Samples</div><div class="v" id="samples">0</div>
+      <div class="u" id="losses">&nbsp;</div></div>
+    <div class="tile"><div class="k">Next window</div><div class="v" id="window">0 / 1000</div>
+      <div class="u" id="windowsDone">&nbsp;</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Latest screening result</h2>
+  <div id="result" class="empty">
+    No window has been scored yet. A window is scored only when 1000 consecutive
+    samples are lead-on, gap-free, unsaturated and contain a detectable heartbeat.
+  </div>
+  <div class="disclaimer">
+    Experimental research screening result &mdash; not a clinical diagnosis.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if devices %}
+<script src="{{ url_for('static', filename='ecg.js') }}"></script>
+<script>
+const $ = id => document.getElementById(id);
+const canvas = $("ecg");
+let lastResultAt = null;
+
+function pill(el, text, cls) {
+  el.textContent = text;
+  el.className = "pill " + cls;
+}
+
+function render(d) {
+  if (d.no_device) {
+    $("diagnosis").textContent = d.diagnosis;
+    return;
+  }
+  ECG.draw(canvas, d.trace || [], {
+    seconds: 10, leadOff: d.lead_off_flags, ok: d.signal_ok
+  });
+
+  $("diagnosis").textContent = d.diagnosis || "";
+  if (d.mode && $("mode").value !== d.mode) { $("mode").value = d.mode; }
+  if (d.thresholds) {
+    for (const o of $("mode").options) {
+      o.textContent = o.value + " (" + d.thresholds[o.value].toFixed(4) + ")";
+    }
+  }
+  pill($("deviceState"),
+       d.online ? "receiving" : "no data",
+       d.online ? "ok" : "off");
+  const b = d.broker || {};
+  pill($("brokerState"),
+       "broker " + (b.connected ? "connected" : (b.enabled ? "disconnected" : "disabled")),
+       b.connected ? "ok" : (b.enabled ? "bad" : "off"));
+
+  $("leadState").innerHTML = d.lead_off
+    ? '<span class="pill mi">LEAD OFF</span>'
+    : '<span class="pill ok">CONNECTED</span>';
+  $("sigState").innerHTML = d.signal_ok
+    ? '<span class="pill ok">AVAILABLE</span>'
+    : '<span class="pill off">NOT AVAILABLE</span>';
+  $("bpm").textContent = d.bpm ? d.bpm + " bpm" : "—";
+  $("rate").textContent = d.rate_hz ? d.rate_hz.toFixed(2) + " Hz" : "—";
+  $("samples").textContent = d.samples || 0;
+  $("losses").textContent = "lost " + (d.lost_chunks || 0) +
+        " · dup " + (d.duplicate_chunks || 0) +
+        " · bad " + (d.malformed_chunks || 0);
+  $("window").textContent = (d.window_progress || 0) + " / " + (d.window_length || 1000);
+  const disc = Object.entries(d.windows_discarded || {})
+      .map(([k, v]) => k.replace(/_/g, " ") + " " + v).join(", ");
+  $("windowsDone").textContent = "scored " + (d.windows_done || 0) +
+        (disc ? " · discarded: " + disc : "");
+
+  const r = d.last_result;
+  if (r && r.at !== lastResultAt) {
+    lastResultAt = r.at;
+    if (r.error) {
+      $("result").innerHTML = '<span class="pill mi">error</span> ' + r.error;
+    } else {
+      const mi = r.prediction === 1;
+      $("result").innerHTML =
+        '<div class="result-prob">' + (100 * r.probability).toFixed(1) + '% ' +
+        '<span class="pill ' + (mi ? 'mi' : 'normal') + '">' + r.label + '</span></div>' +
+        '<div class="result-meta">threshold ' + r.threshold + ' (' + r.mode + ')' +
+        ' · ' + (r.bpm ? Math.round(r.bpm) + ' bpm' : '') +
+        ' · ' + (r.inference_ms ? Math.round(r.inference_ms) + ' ms' : '') +
+        ' · ' + r.at +
+        (r.report_id ? ' · <a href="/ecg/' + r.report_id + '">open report</a>' : '') +
+        '</div>';
+    }
+  }
+}
+
+async function poll() {
+  try {
+    const url = "{{ url_for('ecg.api_live') }}?device=" + encodeURIComponent($("device").value)
+              + "&mode=" + encodeURIComponent($("mode").value);
+    const resp = await fetch(url);
+    if (resp.status === 404) { $("diagnosis").textContent = "That device is not yours."; return; }
+    render(await resp.json());
+  } catch (e) {
+    $("diagnosis").textContent = "Lost contact with the server: " + e;
+  }
+}
+
+$("device").addEventListener("change", poll);
+$("mode").addEventListener("change", poll);
+window.addEventListener("resize", () => ECG.draw(canvas, [], {seconds: 10}));
+poll();
+setInterval(poll, 250);
+</script>
+{% endif %}
+{% endblock %}

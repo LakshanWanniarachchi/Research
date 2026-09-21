@@ -1,0 +1,12 @@
+{
+  "csv": "REC-20260921-180345.csv",
+  "samples": 5992,
+  "dominant_freq_of_raw_signal_hz": 49.833,
+  "share_of_consecutive_diffs_that_alternate_sign": 0.9967,
+  "beat_freq_after_(-1)^n_demodulation_hz": 0.167,
+  "implied_interference_freq_hz": [
+    49.833,
+    50.167
+  ],
+  "lead_off_vs_adc_high_correlation": 0.975
+}

@@ -1,0 +1,226 @@
+/*
+ * ECG screening system - one stylesheet for the whole application.
+ *
+ * Every page used to carry its own copy of a <style> block, and two of them
+ * had drifted into a different colour scheme. One file instead: a clinical
+ * light theme, one accent colour, and status colours that mean the same thing
+ * on every page.
+ *
+ * Restrained on purpose. This is a research prototype that reports a
+ * screening probability about someone's heart; it should look like an
+ * instrument, not like a product launch.
+ */
+
+:root {
+  --ink: #17212b;
+  --muted: #5b6b7c;
+  --line: #dde5ed;
+  --bg: #f4f7fa;
+  --surface: #ffffff;
+  --accent: #1f5fa8;
+  --accent-soft: #eaf1fa;
+  --good: #2a7f4f;
+  --good-soft: #eaf5ee;
+  --bad: #b04a4a;
+  --bad-soft: #fbecec;
+  --warn: #a86b1f;
+  --warn-soft: #fdf5e6;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(23, 33, 43, .06), 0 1px 3px rgba(23, 33, 43, .04);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); }
+h1, h2, h3 { line-height: 1.25; }
+
+/* --- top bar ------------------------------------------------------------ */
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand {
+  font-weight: 650;
+  font-size: 15px;
+  padding: 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+.brand .dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent);
+}
+.nav { display: flex; gap: 2px; flex: 1; flex-wrap: wrap; }
+.nav a {
+  padding: 14px 12px;
+  text-decoration: none;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.nav a:hover { color: var(--ink); }
+.nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+.who { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+main { max-width: 1120px; margin: 0 auto; padding: 22px 20px 44px; }
+
+/* --- notices ------------------------------------------------------------ */
+.banner {
+  background: var(--warn-soft);
+  border: 1px solid #f0dfae;
+  color: var(--warn);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.flash { border-radius: var(--radius); padding: 10px 14px; font-size: 14px; margin-bottom: 14px; }
+.flash.ok { background: var(--good-soft); border: 1px solid #bfe0cc; color: var(--good); }
+.flash.error { background: var(--bad-soft); border: 1px solid #f0c9c9; color: var(--bad); }
+.disclaimer { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+
+/* --- structure ---------------------------------------------------------- */
+.page-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+.page-head h1 { font-size: 20px; margin: 0; }
+.page-head .sub { color: var(--muted); font-size: 13.5px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.card h2 {
+  font-size: 12.5px; margin: 0 0 14px;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+}
+
+.grid { display: grid; gap: 14px; margin-bottom: 18px; }
+.grid.kpi { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+}
+.tile .k { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
+.tile .v { font-size: 23px; font-weight: 640; margin-top: 6px; }
+.tile .u { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+/* --- pills and badges --------------------------------------------------- */
+.pill {
+  display: inline-block; padding: 3px 9px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 640; white-space: nowrap;
+}
+.pill.ok, .pill.normal { background: var(--good-soft); color: var(--good); }
+.pill.mi, .pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.off { background: #eef1f5; color: var(--muted); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+
+/* --- forms -------------------------------------------------------------- */
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+input[type=text], input[type=password], input[type=number], input[type=date], select {
+  font: inherit;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  width: 100%;
+  max-width: 340px;
+}
+input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.field { margin-bottom: 14px; }
+.field .err { color: var(--bad); font-size: 12.5px; margin-top: 5px; }
+.hint { color: var(--muted); font-size: 12.5px; margin-top: 5px; }
+.form-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+
+button, .btn {
+  font: inherit;
+  padding: 9px 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+button:hover, .btn:hover { border-color: #c4d2e0; }
+button.primary, .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.danger { color: var(--bad); }
+button[disabled] { opacity: .5; cursor: default; }
+
+/* --- tables ------------------------------------------------------------- */
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th {
+  text-align: left; font-weight: 640; color: var(--muted);
+  border-bottom: 1px solid var(--line); padding: 9px 8px; white-space: nowrap;
+}
+td { padding: 9px 8px; border-bottom: 1px solid #eef2f7; }
+tr:last-child td { border-bottom: 0; }
+.table-wrap { overflow-x: auto; }
+.mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.empty { color: var(--muted); font-style: italic; font-size: 13.5px; padding: 8px 0; }
+
+/* --- ECG canvas --------------------------------------------------------- */
+.ecg-wrap { position: relative; }
+canvas.ecg {
+  width: 100%;
+  height: 300px;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.ecg-note { color: var(--muted); font-size: 12.5px; margin-top: 9px; }
+
+/* --- result block ------------------------------------------------------- */
+.result-prob { font-size: 30px; font-weight: 660; }
+.result-meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+/* --- sign-in / register card ------------------------------------------- */
+.auth-wrap { max-width: 400px; margin: 8vh auto; padding: 0 18px; }
+.auth-wrap .card { padding: 26px 26px 22px; }
+.auth-wrap h1 { font-size: 19px; margin: 0 0 4px; }
+.auth-wrap .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+.auth-wrap input { max-width: none; }
+.auth-wrap button { width: 100%; }
+
+/* --- responsive --------------------------------------------------------- */
+@media (max-width: 720px) {
+  .topbar { padding: 0 14px; gap: 10px; }
+  .brand { padding: 12px 0; }
+  .nav a { padding: 10px 9px; }
+  main { padding: 16px 14px 36px; }
+  .card { padding: 15px 14px; }
+  canvas.ecg { height: 220px; }
+  .who { display: none; }
+  /* A history table with eight columns cannot fit a phone; it scrolls
+     sideways inside its own box rather than stretching the page. */
+  table { min-width: 620px; }
+}

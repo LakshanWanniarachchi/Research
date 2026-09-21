@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty %}
+{% set active = 'device' %}
+{% block title %}Device stream &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}Device Stream{% endblock %}
+{% block crumb %}<div class="crumb">What the IoT device is sending over Wi-Fi and MQTT, valid ECG or not</div>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ url_for('ecg.live') }}">{{ icon('i-pulse') }} Live ECG</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not devices %}
+<div class="card">
+  {% call empty("No ECG device linked",
+                "Link your ESP32 on the Devices page first.", ico="i-chip") %}
+    <a class="btn primary" href="{{ url_for('account.devices') }}">{{ icon('i-plus') }} Link a device</a>
+  {% endcall %}
+</div>
+
+{% else %}
+
+<div class="card">
+  <div class="form-row">
+    <div class="field">
+      <label for="device">Device</label>
+      <select id="device">
+        {% for d in devices %}
+        <option value="{{ d['device_id'] }}" {% if d['device_id'] == selected %}selected{% endif %}>
+          {{ d["device_id"] }}{% if d["label"] %} — {{ d["label"] }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="disclaimer">
+    This page shows the raw stream from the device. It is for checking the
+    connection and the wiring: nothing here is scored, and the trace is shown
+    whether or not it is a usable ECG.
+  </div>
+</div>
+
+<div class="grid stats">
+  <div class="stat"><div class="stat-ico">{{ icon('i-wifi', 19) }}</div><div>
+    <div class="k">Connection</div>
+    <div class="v sm"><span class="badge idle" id="stOnline"><span class="dot"></span>CHECKING</span></div>
+    <div class="u" id="lastSeen">&nbsp;</div></div></div>
+  <div class="stat"><div class="stat-ico">{{ icon('i-inbox', 19) }}</div><div>
+    <div class="k">Chunks per second</div>
+    <div class="v" id="chunkRate">—</div>
+    <div class="u" id="chunkTotal">&nbsp;</div></div></div>
+  <div class="stat"><div class="stat-ico">{{ icon('i-pulse', 19) }}</div><div>
+    <div class="k">Samples received</div>
+    <div class="v" id="samples">0</div>
+    <div class="u" id="rate">&nbsp;</div></div></div>
+  <div class="stat"><div class="stat-ico">{{ icon('i-chip', 19) }}</div><div>
+    <div class="k">MQTT broker</div>
+    <div class="v sm"><span class="badge idle" id="stBroker"><span class="dot"></span>CHECKING</span></div>
+    <div class="u" id="brokerMsgs">&nbsp;</div></div></div>
+</div>
+
+<div class="grid monitor">
+  <div class="card">
+    <div class="card-head">
+      <h2>Raw signal &middot; last 10 seconds, unfiltered</h2>
+      <span class="spacer"></span>
+      <span class="badge idle" id="stSignal"><span class="dot"></span>WAITING</span>
+    </div>
+    <div class="ecg-panel">
+      <canvas class="ecg" id="ecg" aria-label="Raw signal from the device"></canvas>
+      <div class="ecg-scale">
+        <span>raw 12-bit ADC counts, autoscaled</span>
+        <span>red ticks along the top = lead-off samples</span>
+      </div>
+    </div>
+    <div class="ecg-note" id="diagnosis">Waiting for data from the device&hellip;</div>
+
+    <div class="card-head" style="margin:18px -20px 12px"><h2>Latest chunk received</h2></div>
+    <table class="kv">
+      <tr><th>Sequence number</th><td class="mono" id="cSeq">—</td></tr>
+      <tr><th>Received</th><td id="cAgo">—</td></tr>
+      <tr><th>Samples in chunk</th><td class="mono" id="cN">—</td></tr>
+      <tr><th>ADC range in chunk</th><td class="mono" id="cRange">—</td></tr>
+      <tr><th>First values</th><td class="mono" id="cHead" style="word-break:break-all">—</td></tr>
+      <tr><th>LO+ flags (last 20)</th><td class="mono" id="cLop">—</td></tr>
+      <tr><th>LO&minus; flags (last 20)</th><td class="mono" id="cLom">—</td></tr>
+    </table>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Electrodes</h2></div>
+      <div class="status-list">
+        <div class="status-row"><span class="label">Overall</span>
+          <span class="value"><span class="badge idle" id="stLead"><span class="dot"></span>UNKNOWN</span></span></div>
+        <div class="status-row"><span class="label">LO+ &middot; +IN electrode</span>
+          <span class="value"><span class="badge idle" id="stLoPlus"><span class="dot"></span>NO DATA</span></span></div>
+        <div class="status-row"><span class="label">LO&minus; &middot; &minus;IN electrode</span>
+          <span class="value"><span class="badge idle" id="stLoMinus"><span class="dot"></span>NO DATA</span></span></div>
+      </div>
+      <div class="notice info" style="margin:10px 0 0" role="status"><div id="electrodeNote">Waiting for data from the device.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Device report</h2></div>
+      <table class="kv">
+        <tr><th>State</th><td id="dState">—</td></tr>
+        <tr><th>Firmware</th><td class="mono" id="dFw">—</td></tr>
+        <tr><th>IP address</th><td class="mono" id="dIp">—</td></tr>
+        <tr><th>Wi-Fi signal</th><td id="dRssi">—</td></tr>
+        <tr><th>Reported</th><td id="dAt">—</td></tr>
+      </table>
+      <div class="disclaimer">The device publishes this retained status when it connects.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Transport counters</h2></div>
+      <table class="kv">
+        <tr><th>Chunks received</th><td class="mono" id="nChunks">0</td></tr>
+        <tr><th>Lost chunks</th><td class="mono" id="nLost">0</td></tr>
+        <tr><th>Duplicates dropped</th><td class="mono" id="nDup">0</td></tr>
+        <tr><th>Malformed</th><td class="mono" id="nBad">0</td></tr>
+        <tr><th>Device restarts</th><td class="mono" id="nRestart">0</td></tr>
+        <tr><th>Broker rejections</th><td class="mono" id="nRej">0</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Recent device events</h2></div>
+  <div class="table-wrap">
+    <table class="stacked">
+      <thead><tr><th>Time</th><th>Event</th><th>Value</th></tr></thead>
+      <tbody id="events"><tr><td colspan="3" class="muted">No events yet.</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if devices %}
+<script src="{{ url_for('static', filename='js/ecg.js') }}"></script>
+<script>
+(function () {
+  var $ = UI.$, device = $("device");
+  var lastChunks = null, lastAt = null, trace = [], leadFlags = [];
+
+  function badge(id, text, kind, live) {
+    $(id).className = "badge " + kind + (live ? " live" : "");
+    $(id).innerHTML = '<span class="dot"></span>' + UI.escapeHtml(text);
+  }
+  function set(id, value) { $(id).textContent = value === undefined || value === null ? "—" : value; }
+  function clock(epoch) { return epoch ? new Date(epoch * 1000).toLocaleTimeString() : "—"; }
+  function secondsAgo(epoch) {
+    if (!epoch) return "—";
+    var s = Math.max(0, Date.now() / 1000 - epoch);
+    return s < 2 ? "just now" : s < 120 ? Math.round(s) + " s ago" : Math.round(s / 60) + " min ago";
+  }
+
+  function render(d) {
+    var b = d.broker || {};
+    badge("stBroker", b.connected ? "CONNECTED" : (b.enabled ? "DISCONNECTED" : "DISABLED"),
+          b.connected ? "ok" : "flag", b.connected);
+    set("brokerMsgs", (b.messages || 0) + " messages, " + (b.rejected || 0) + " rejected");
+
+    badge("stOnline", d.online ? "RECEIVING" : "OFFLINE", d.online ? "ok" : "flag", d.online);
+    set("lastSeen", d.last_seen_s_ago === null || d.last_seen_s_ago === undefined
+        ? "nothing received yet" : "last message " + Math.round(d.last_seen_s_ago) + " s ago");
+
+    // Chunks per second from two successive polls; the device sends one a second.
+    var now = Date.now() / 1000;
+    if (lastChunks !== null && now > lastAt) {
+      set("chunkRate", ((d.chunks - lastChunks) / (now - lastAt)).toFixed(1));
+    }
+    lastChunks = d.chunks || 0; lastAt = now;
+    set("chunkTotal", (d.chunks || 0) + " chunks in total");
+    set("samples", d.samples || 0);
+    set("rate", d.rate_hz ? d.rate_hz.toFixed(2) + " Hz measured" : "rate not yet measured");
+
+    trace = d.trace || []; leadFlags = d.lead_off_flags || [];
+    ECG.draw($("ecg"), trace, { seconds: 10, leadOff: leadFlags });
+    badge("stSignal", d.signal_ok ? "VALID ECG" : "NOT A VALID ECG", d.signal_ok ? "ok" : "warn");
+    set("diagnosis", d.online ? d.diagnosis : "The device is not sending. The trace is the last data received.");
+
+    var e = d.online ? d.electrodes : null;
+    if (!e) {
+      badge("stLead", "UNKNOWN", "idle"); badge("stLoPlus", "NO DATA", "idle"); badge("stLoMinus", "NO DATA", "idle");
+      set("electrodeNote", "No data from the device, so electrode contact cannot be checked.");
+    } else {
+      var off = e.lo_plus_off || e.lo_minus_off;
+      badge("stLead", off ? "LEAD OFF" : "ATTACHED", off ? "flag" : "ok");
+      badge("stLoPlus", e.lo_plus_off ? "OFF" : "ATTACHED", e.lo_plus_off ? "flag" : "ok");
+      badge("stLoMinus", e.lo_minus_off ? "OFF" : "ATTACHED", e.lo_minus_off ? "flag" : "ok");
+      set("electrodeNote",
+          e.lo_plus_off && e.lo_minus_off ? "Both electrodes are off. Attach them and press them firmly onto the skin."
+        : e.lo_plus_off ? "The electrode on the +IN input (LO+) is not making contact."
+        : e.lo_minus_off ? "The electrode on the −IN input (LO−) is not making contact."
+        : "Both electrodes are making contact.");
+    }
+
+    var c = d.last_chunk;
+    if (c) {
+      set("cSeq", c.seq); set("cAgo", secondsAgo(c.received_at) + " (" + clock(c.received_at) + ")");
+      set("cN", c.n); set("cRange", c.adc_min + " – " + c.adc_max + " counts");
+      set("cHead", c.adc_head.join(", ") + " …");
+      set("cLop", (c.lop || "").slice(-20) || "not sent");
+      set("cLom", (c.lom || "").slice(-20) || "not sent");
+    }
+
+    var st = d.status || {};
+    set("dState", st.state); set("dFw", st.fw); set("dIp", st.ip);
+    set("dRssi", st.rssi !== undefined ? st.rssi + " dBm" : null);
+    set("dAt", st.received_at ? clock(st.received_at) : null);
+
+    set("nChunks", d.chunks || 0); set("nLost", d.lost_chunks || 0); set("nDup", d.duplicate_chunks || 0);
+    set("nBad", d.malformed_chunks || 0); set("nRestart", d.device_restarts || 0); set("nRej", b.rejected || 0);
+
+    var ev = d.events || [];
+    $("events").innerHTML = ev.length ? ev.map(function (x) {
+      return '<tr><td data-label="Time">' + clock(x.at) + '</td>' +
+             '<td data-label="Event">' + UI.escapeHtml(String(x.event || "").replace(/_/g, " ")) + '</td>' +
+             '<td data-label="Value" class="mono">' + UI.escapeHtml(String(x.value === undefined ? "" : x.value)) + '</td></tr>';
+    }).join("") : '<tr><td colspan="3" class="muted">No events yet.</td></tr>';
+  }
+
+  var failures = 0;
+  async function tick() {
+    try {
+      render(await UI.getJSON("{{ url_for('ecg.api_live') }}?device=" + encodeURIComponent(device.value)));
+      failures = 0;
+    } catch (err) {
+      if (++failures === 4) UI.toast(err.message || "Lost contact with the server.", "err");
+    }
+  }
+  window.addEventListener("resize", function () { ECG.draw($("ecg"), trace, { seconds: 10, leadOff: leadFlags }); });
+  device.addEventListener("change", function () { lastChunks = null; tick(); });
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+{% endif %}
+{% endblock %}

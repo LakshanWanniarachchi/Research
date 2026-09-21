@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ECG Screening System{% endblock %}</title>
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="{{ url_for('static', filename='icons.svg') }}#i-pulse" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+</head>
+<body>
+{% from "_macros.html" import icon %}
+<div class="auth">
+
+  {#
+    The left panel says what the system is before anyone signs in. The trace
+    behind it is a drawn path, not a recording: a real ECG on a sign-in screen
+    would be someone's actual heart used as decoration.
+  #}
+  <section class="auth-art">
+    <div class="row" style="gap:12px; margin-bottom:28px">
+      <span class="brand-mark">{{ icon('i-pulse', 20) }}</span>
+      <span>
+        <span class="brand-name" style="color:#fff">ECG Screening System</span><br>
+        <span class="brand-sub" style="color:#8aa0b4">Single-lead myocardial infarction screening</span>
+      </span>
+    </div>
+
+    <h2>Deep-learning screening from a single ECG lead.</h2>
+    <p>
+      A 1D convolutional ensemble reads ten seconds of Lead&nbsp;I and reports a
+      probability of a myocardial infarction pattern. Signals arrive from an
+      AD8232 front end on an ESP32, over Wi-Fi or USB.
+    </p>
+
+    <ul class="points">
+      <li>{{ icon('i-wifi') }}<span>ECG streamed from the device and scored as it arrives</span></li>
+      <li>{{ icon('i-shield') }}<span>Each account sees only the recordings from its own devices</span></li>
+      <li>{{ icon('i-flask') }}<span>Model trained on the PTB-XL clinical dataset, never on live signals</span></li>
+    </ul>
+
+    <svg class="auth-trace" viewBox="0 0 1200 120" preserveAspectRatio="none" height="110" aria-hidden="true">
+      <path d="M0 60 H140 l14 -6 8 14 12 -46 14 78 10 -40 h10 l8 -8 10 8 H420
+               l14 -6 8 14 12 -46 14 78 10 -40 h10 l8 -8 10 8 H700
+               l14 -6 8 14 12 -46 14 78 10 -40 h10 l8 -8 10 8 H980
+               l14 -6 8 14 12 -46 14 78 10 -40 h10 l8 -8 10 8 H1200"
+            fill="none" stroke="#3f9ae0" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>
+    </svg>
+  </section>
+
+  <section class="auth-form">
+    <div class="inner">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="notice {{ 'err' if category == 'error' else 'ok' }}" role="status">
+            {{ icon('i-alert') if category == 'error' else icon('i-check') }}
+            <div>{{ message }}</div>
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      {% block form %}{% endblock %}
+
+      <div class="auth-foot">
+        {% block foot %}{% endblock %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+</body>
+</html>

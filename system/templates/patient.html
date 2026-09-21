@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, stat, empty %}
+{% set active = 'simulation' %}
+{% block title %}{% if patient %}{{ patient.name }}{% else %}Patient not found{% endif %} &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}{% if patient %}{{ patient.name }}{% else %}Patient not found{% endif %}{% endblock %}
+{% block crumb %}
+{% if patient %}
+<div class="crumb">
+  {% if patient.age %}{{ patient.age }} years{% else %}age not recorded{% endif %}
+  {%- if patient.sex %} &middot; {{ patient.sex }}{% endif %} &middot;
+  device {% if patient.device_id %}<span class="mono">{{ patient.device_id }}</span>{% else %}not assigned{% endif %} &middot;
+  enrolled {{ patient.created_at }}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ url_for('index') }}">{{ icon('i-flask') }} Back to replay</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not patient %}
+<div class="card">
+  {{ empty("Patient not found", "There is no patient with that id.", ico="i-user") }}
+</div>
+
+{% else %}
+
+<div class="notice warn">
+  {{ icon('i-warn') }}
+  <div><strong>Illustrative demographics.</strong> The ECG signals and their
+  Normal/MI labels are real PTB-XL data, but the person they are filed under
+  here was entered by hand: PTB-XL patient metadata (age, sex, clinical report)
+  is not part of the extracted dataset. This page demonstrates how readings are
+  attributed to a patient, not a real clinical record.</div>
+</div>
+
+<div class="grid stats">
+  {{ stat("Readings", stats.total, "", ico="i-file") }}
+  {{ stat("Flagged as MI", stats.n_flagged_mi, "screening flags, not diagnoses",
+          kind="flag" if stats.n_flagged_mi else "idle", ico="i-warn") }}
+  {{ stat("Mean MI probability",
+          ("%.3f"|format(stats.avg_probability)) if stats.avg_probability is not none else "—",
+          "", ico="i-pulse") }}
+  {{ stat("Mean model time", stats.avg_inference_ms, "milliseconds", kind="idle", ico="i-history") }}
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>Reading history</h2>
+    <span class="spacer"></span>
+    <span class="caption">
+      {% if stats.last_seen %}Last reading {{ stats.last_seen }}{% endif %} &middot;
+      up to 50, newest first</span>
+  </div>
+
+  {% if predictions %}
+  <div class="table-wrap">
+    <table class="stacked">
+      <thead>
+        <tr><th>#</th><th>When</th><th>Source</th><th>Probability</th>
+            <th>Threshold</th><th>Operating point</th><th>Model said</th>
+            <th>Real diagnosis</th><th>ms</th></tr>
+      </thead>
+      <tbody>
+        {% for p in predictions %}
+        <tr>
+          <td data-label="#">{{ p.id }}</td>
+          <td data-label="When">{{ p.created_at }}</td>
+          <td data-label="Source"><span class="badge idle">{{ p.source }}</span></td>
+          <td data-label="Probability" class="mono">{{ "%.3f"|format(p.probability) }}</td>
+          <td data-label="Threshold" class="mono">{{ "%.3f"|format(p.threshold) }}</td>
+          <td data-label="Operating point">{{ p.mode }}</td>
+          <td data-label="Model said">
+            {% if p.prediction %}<span class="badge flag"><span class="dot"></span>MI pattern</span>
+            {% else %}<span class="badge ok"><span class="dot"></span>Normal</span>{% endif %}</td>
+          <td data-label="Real diagnosis">
+            {% if p.truth is none %}—{% elif p.truth %}MI{% else %}Normal{% endif %}</td>
+          <td data-label="ms">{{ "%.0f"|format(p.inference_ms) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  {{ empty("No readings yet",
+           "Take a simulated reading with this patient selected on the replay page, or point a
+            device at POST /api/predict with device_id " ~ (patient.device_id or "ESP32-001") ~ ".",
+           ico="i-inbox") }}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, stat, result_badge, empty %}
+{% set active = 'history' %}
+{% block title %}ECG reports &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}ECG Reports{% endblock %}
+{% block crumb %}<div class="crumb">Recordings made by your own devices, newest first</div>{% endblock %}
+
+{% block actions %}
+<a class="btn primary" href="{{ url_for('ecg.live') }}">{{ icon('i-pulse') }} Open live monitor</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="grid stats">
+  {{ stat("Total recordings", stats.total, "", ico="i-file") }}
+  {{ stat("Normal pattern", stats.normal, "", kind="ok", ico="i-check") }}
+  {{ stat("MI-flagged", stats.flagged, "screening flags, not diagnoses", kind="flag", ico="i-warn") }}
+  {{ stat("Latest", stats.last_at or "—", "", kind="idle", ico="i-history", small=true) }}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Filter</h2></div>
+  <form method="get">
+    <div class="form-row">
+      <div class="field">
+        <label for="result">Result</label>
+        <select id="result" name="result">
+          <option value="" {% if not filters.result %}selected{% endif %}>All results</option>
+          <option value="normal" {% if filters.result == 'normal' %}selected{% endif %}>Normal pattern</option>
+          <option value="mi" {% if filters.result == 'mi' %}selected{% endif %}>MI-flagged</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="from">From</label>
+        <input type="date" id="from" name="from" value="{{ filters['from'] or '' }}">
+      </div>
+      <div class="field">
+        <label for="to">To</label>
+        <input type="date" id="to" name="to" value="{{ filters['to'] or '' }}">
+      </div>
+      <div class="field none">
+        <button class="btn primary" type="submit">{{ icon('i-filter') }} Apply</button>
+        <a class="btn" href="{{ url_for('ecg.history') }}">Clear</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2>{{ total }} recording{{ '' if total == 1 else 's' }}</h2>
+  </div>
+
+  {% if reports %}
+  <div class="table-wrap">
+    <table class="stacked">
+      <thead>
+        <tr>
+          <th>Date</th><th>Time</th><th>Result</th><th>MI probability</th>
+          <th>Heart rate</th><th>Duration</th><th>Device</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td data-label="Date">{{ r["created_at"][:10] }}</td>
+          <td data-label="Time">{{ r["created_at"][11:16] }}</td>
+          <td data-label="Result">{{ result_badge(r["prediction"]) }}</td>
+          <td data-label="Probability" class="mono">{{ "%.1f"|format(100 * r["probability"]) }}%</td>
+          <td data-label="Heart rate">{% if r["bpm"] %}{{ "%.0f"|format(r["bpm"]) }} bpm{% else %}—{% endif %}</td>
+          <td data-label="Duration">{{ "%.0f"|format(r["duration_s"]) }} s</td>
+          <td data-label="Device" class="mono">{{ r["device_id"] or "—" }}</td>
+          <td class="act">
+            <a class="btn sm" href="{{ url_for('ecg.report', report_id=r['id']) }}">View report</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="pager" aria-label="Pagination">
+    {% if page > 1 %}
+      <a class="btn sm" href="{{ url_for('ecg.history', page=page-1, result=filters.result, **{'from': filters['from'], 'to': filters['to']}) }}">Previous</a>
+    {% endif %}
+    <span class="page-of">Page {{ page }} of {{ pages }}</span>
+    {% if page < pages %}
+      <a class="btn sm" href="{{ url_for('ecg.history', page=page+1, result=filters.result, **{'from': filters['from'], 'to': filters['to']}) }}">Next</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+  {% elif filters.result or filters['from'] or filters['to'] %}
+  {% call empty("No recordings match this filter",
+                "Try a wider date range, or clear the filter to see every recording.",
+                ico="i-filter") %}
+    <a class="btn" href="{{ url_for('ecg.history') }}">Clear filter</a>
+  {% endcall %}
+
+  {% else %}
+  {% call empty("No ECG recordings yet",
+                "Link your device, connect the electrodes and open the live monitor.
+                 Each clean ten-second window is scored and stored here automatically.",
+                ico="i-inbox") %}
+    <a class="btn primary" href="{{ url_for('ecg.live') }}">{{ icon('i-pulse') }} Open live monitor</a>
+  {% endcall %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, screening_note %}
+{% set active = 'usb' %}
+{% block title %}Live ECG over USB &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}Live ECG &middot; USB{% endblock %}
+{% block crumb %}<div class="crumb">Read directly from the serial port at 115200 baud</div>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ url_for('ecg.live') }}">{{ icon('i-wifi') }} Wi-Fi instead</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-head"><h2>Serial link</h2></div>
+  <div class="form-row">
+    <div class="field">
+      <label for="port">Serial port</label>
+      <select id="port"><option value="">Detect automatically</option></select>
+    </div>
+    <div class="field">
+      <label for="mode">Experimental operating point</label>
+      <select id="mode">
+        {% for name, value in thresholds.items() %}
+        <option value="{{ name }}" {% if name == 'high_recall' %}selected{% endif %}>
+          {{ name }} ({{ '%.4f'|format(value) }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field none">
+      <label class="inline"><input type="checkbox" id="save" style="width:auto"> Save a CSV copy</label>
+    </div>
+    <div class="field none">
+      <button class="btn primary" id="startBtn" type="button">{{ icon('i-pulse') }} Start recording</button>
+      <button class="btn" id="stopBtn" type="button" disabled>Stop</button>
+    </div>
+  </div>
+  <div class="disclaimer">
+    Device id <span class="mono">{{ device_id }}</span>. The USB path exists for
+    bench work and debugging; the Wi-Fi path is the one the system is built
+    around. Both feed the same model and store the same kind of report.
+  </div>
+  <div class="notice err hidden" id="startError" role="alert">
+    {{ icon('i-alert') }}<div id="startErrorText"></div>
+  </div>
+</div>
+
+<div class="grid monitor">
+  <div class="card">
+    <div class="card-head">
+      <h2>Lead I &middot; last 10 seconds</h2>
+      <span class="spacer"></span>
+      <span class="badge idle" id="stDevice"><span class="dot"></span>STOPPED</span>
+    </div>
+
+    <div class="ecg-panel">
+      <canvas class="ecg" id="ecg" aria-label="Live ECG waveform"></canvas>
+      <div class="ecg-flag hidden" id="ecgFlag" role="status"></div>
+      <div class="ecg-scale">
+        <span>1 major division = 1 s</span>
+        <span>100 Hz</span>
+        <span>y axis autoscaled raw ADC counts, not calibrated mV</span>
+      </div>
+    </div>
+    <div class="ecg-note" id="diagnosis">Not started.</div>
+
+    <div class="readouts" style="margin-top:16px">
+      <div class="readout"><div class="k">Heart rate</div>
+        <div class="v"><span id="bpm">—</span> <span class="u">bpm</span></div></div>
+      <div class="readout"><div class="k">Sampling rate</div>
+        <div class="v"><span id="rate">—</span> <span class="u">Hz</span></div></div>
+      <div class="readout"><div class="k">Samples received</div>
+        <div class="v" id="samples">0</div></div>
+      <div class="readout"><div class="k">Next window</div>
+        <div class="v" id="window">0 / 1000</div></div>
+    </div>
+
+    <div class="meter" style="margin-top:14px">
+      <div class="track"><div class="fill" id="windowBar" style="width:0%"></div></div>
+      <div class="ends">
+        <span id="windowsDone">scored 0</span>
+        <span id="counters"></span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Session status</h2></div>
+      <div class="status-list">
+        <div class="status-row"><span class="label">Serial link</span>
+          <span class="value"><span class="badge idle" id="stLink"><span class="dot"></span>STOPPED</span></span></div>
+        <div class="status-row"><span class="label">Electrodes</span>
+          <span class="value"><span class="badge idle" id="stLead"><span class="dot"></span>UNKNOWN</span></span></div>
+        <div class="notice info" style="margin:8px 0 4px" role="status">
+          <div id="electrodeNote">Press start to read the device.</div>
+        </div>
+        <div class="status-row"><span class="label">ECG signal</span>
+          <span class="value"><span class="badge idle" id="stSignal"><span class="dot"></span>WAITING</span></span></div>
+        <div class="status-row"><span class="label">Model</span>
+          <span class="value"><span class="badge info"><span class="dot"></span>READY</span></span></div>
+      </div>
+      <div class="disclaimer">
+        A window is scored only when 1000 consecutive samples are lead-on,
+        gap-free, unsaturated and contain a detectable heartbeat.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Latest screening result</h2></div>
+      <div id="result" class="empty" style="padding:24px 8px">
+        <div class="ico">{{ icon('i-pulse', 22) }}</div>
+        <b>No window scored yet</b>
+        <p>Press start, connect the electrodes, and stay still for ten seconds.</p>
+      </div>
+      <div class="disclaimer">{{ screening_note() }}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ecg.js') }}"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+<script>
+(function () {
+  var startBtn = UI.$("startBtn"), stopBtn = UI.$("stopBtn");
+
+  LiveMonitor.start({
+    poll: function () { return UI.getJSON("/api/live/data"); },
+    onRaw: function (d) {
+      startBtn.disabled = !!d.running;
+      stopBtn.disabled = !d.running;
+    },
+    adapt: function (d) {
+      if (!d.running) {
+        return {
+          connected: false, connectionText: "STOPPED", online: false,
+          trace: [], leadOffFlags: [], signalOk: false, leadOff: false,
+          diagnosis: d.error || "Not started.",
+          windowProgress: 0, windowLength: 1000, windowsDone: 0
+        };
+      }
+      return {
+        connected: !!d.connected,
+        connectionText: d.connected ? ("STREAMING " + (d.port || "")) : "NO LINK",
+        online: !!d.connected,
+        trace: d.trace, leadOffFlags: d.lead_off_flags,
+        signalOk: !!d.signal_ok, leadOff: !!d.lead_off,
+        diagnosis: d.diagnosis,
+        bpm: d.bpm, rateHz: d.rate_device_hz, samples: d.samples,
+        counters: "malformed " + (d.malformed || 0) + " · gaps " + (d.sequence_gaps || 0),
+        windowProgress: d.window_progress, windowLength: d.window_length,
+        windowsDone: d.windows_done, windowsDiscarded: d.windows_discarded,
+        lastResult: d.last_result
+      };
+    }
+  });
+
+  // The port list is a convenience; leaving it on auto-detect is the normal
+  // case, so a failure to enumerate ports is not worth an error message.
+  UI.getJSON("/api/live/ports").then(function (d) {
+    (d.ports || []).forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.device;
+      o.textContent = p.device + (p.description ? " — " + p.description : "");
+      UI.$("port").appendChild(o);
+    });
+  }).catch(function () {});
+
+  function showStartError(message) {
+    UI.$("startErrorText").textContent = message;
+    UI.$("startError").classList.remove("hidden");
+  }
+
+  startBtn.onclick = async function () {
+    UI.$("startError").classList.add("hidden");
+    startBtn.disabled = true;
+    var d = await UI.postJSON("/api/live/start", {
+      port: UI.$("port").value,
+      save: UI.$("save").checked,
+      mode: UI.$("mode").value
+    });
+    if (!d.running) {
+      showStartError(d.error || "Could not open the serial port.");
+      startBtn.disabled = false;
+    } else {
+      UI.toast("Recording from " + (d.port || "the detected port") + ".", "ok");
+    }
+  };
+
+  stopBtn.onclick = async function () {
+    await UI.postJSON("/api/live/stop", {});
+    UI.toast("Recording stopped.", "info");
+  };
+})();
+</script>
+{% endblock %}

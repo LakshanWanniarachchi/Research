@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ECG Screening System{% endblock %}</title>
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="{{ url_for('static', filename='icons.svg') }}#i-pulse" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% from "_macros.html" import icon %}
+<div class="app">
+
+  <a class="sr-only" href="#main">Skip to content</a>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      <span class="brand-mark">{{ icon('i-pulse', 20) }}</span>
+      <span>
+        <span class="brand-name">ECG Screening System</span><br>
+        <span class="brand-sub">Single-lead MI screening</span>
+      </span>
+    </a>
+
+    <nav class="side-nav" aria-label="Main">
+      <a href="{{ url_for('dashboard') }}" {% if active == 'dashboard' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-grid') }} Dashboard</a>
+
+      <div class="group">Monitoring</div>
+      <a href="{{ url_for('ecg.live') }}" {% if active == 'live' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-wifi') }} Live ECG &middot; Wi-Fi</a>
+      <a href="{{ url_for('live_page') }}" {% if active == 'usb' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-usb') }} Live ECG &middot; USB</a>
+      <a href="{{ url_for('ecg.device_stream') }}" {% if active == 'device' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-inbox') }} Device Stream</a>
+
+      <div class="group">Records</div>
+      <a href="{{ url_for('ecg.history') }}" {% if active == 'history' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-file') }} ECG Reports</a>
+      <a href="{{ url_for('account.devices') }}" {% if active == 'devices' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-chip') }} My Devices</a>
+      <a href="{{ url_for('account.profile') }}" {% if active == 'profile' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-user') }} Profile</a>
+
+      <div class="group">Research</div>
+      <a href="{{ url_for('index') }}" {% if active == 'simulation' %}class="active" aria-current="page"{% endif %}>
+        {{ icon('i-flask') }} PTB-XL replay</a>
+    </nav>
+
+    <div class="side-foot">
+      {% if user %}
+      <div class="side-user">
+        <span class="avatar" aria-hidden="true">
+          {{ (user["full_name"] or user["username"])[:1] | upper }}</span>
+        <span class="who">
+          <b>{{ user["full_name"] or user["username"] }}</b>
+          <span>{{ user["username"] }} &middot; {{ user["role"] }}</span>
+        </span>
+      </div>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <button class="btn" type="submit">{{ icon('i-logout') }} Sign out</button>
+      </form>
+      {% endif %}
+    </div>
+  </aside>
+
+  <div class="scrim" role="presentation"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" type="button"
+              aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">
+        {{ icon('i-menu', 20) }}
+      </button>
+      <div>
+        <h1>{% block page_title %}{% endblock %}</h1>
+        {% block crumb %}{% endblock %}
+      </div>
+      <div class="top-actions">{% block actions %}{% endblock %}</div>
+    </header>
+
+    <main class="content" id="main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="notice {{ 'err' if category == 'error' else 'ok' }}" role="status">
+            {{ icon('i-alert') if category == 'error' else icon('i-check') }}
+            <div>{{ message }}</div>
+          </div>
+        {% endfor %}
+      {% endwith %}
+
+      {% block banner %}
+      <div class="notice warn" role="note">
+        {{ icon('i-shield') }}
+        <div><strong>Research prototype.</strong>
+        This is not a medical device and is not validated for clinical use.
+        Every output is an experimental screening indication that recommends
+        assessment; it is never a diagnosis, and a negative result does not
+        exclude a myocardial infarction.</div>
+      </div>
+      {% endblock %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

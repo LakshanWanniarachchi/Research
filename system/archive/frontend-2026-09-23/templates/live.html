@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live ECG &middot; ECG Screening System</title>
+  <style>
+    :root { --ink:#1a1a1a; --muted:#5b6b7c; --line:#d9e2ec; --bg:#f4f6f9;
+            --accent:#1f5fa8; --bad:#b04a4a; --good:#2a7f4f; --warn:#a86b1f; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header { background:#fff; border-bottom:1px solid var(--line);
+             padding:14px 24px; display:flex; align-items:center; gap:16px; }
+    header h1 { font-size:16px; margin:0; flex:1; }
+    header .who { color:var(--muted); font-size:13px; }
+    header form { margin:0; }
+    button { border:1px solid var(--line); background:#fff; border-radius:6px;
+             padding:6px 12px; font-size:13px; cursor:pointer;
+             font-family:inherit; }
+    button.primary { background:var(--accent); border-color:var(--accent);
+                     color:#fff; }
+    button[disabled] { opacity:.5; cursor:default; }
+    main { max-width:1080px; margin:0 auto; padding:24px; }
+    .banner { background:#fff8e6; border:1px solid #f0dfae; color:var(--warn);
+              padding:10px 14px; border-radius:8px; font-size:13px;
+              margin-bottom:20px; }
+    section { background:#fff; border:1px solid var(--line); border-radius:8px;
+              padding:18px 20px; margin-bottom:20px; }
+    section h2 { font-size:14px; margin:0 0 14px; text-transform:uppercase;
+                 letter-spacing:.04em; color:var(--muted); }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    select { font:inherit; padding:6px 8px; border:1px solid var(--line);
+             border-radius:6px; background:#fff; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+            gap:14px; margin:16px 0 0; }
+    .tile { background:#fff; border:1px solid var(--line); border-radius:8px;
+            padding:12px 14px; }
+    .tile .k { color:var(--muted); font-size:12px; text-transform:uppercase;
+               letter-spacing:.04em; margin-bottom:6px; }
+    .tile .v { font-size:20px; font-weight:600; }
+    .tile .u { color:var(--muted); font-size:12px; margin-top:4px; }
+    canvas { width:100%; height:300px; display:block; border:1px solid var(--line);
+             border-radius:6px; background:#fff; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:99px;
+            font-size:11px; font-weight:600; }
+    .pill.mi { background:#fdecec; color:var(--bad); }
+    .pill.norm { background:#eef7ee; color:var(--good); }
+    .pill.on { background:#eef7ee; color:var(--good); }
+    .pill.off { background:#f0f2f5; color:var(--muted); }
+    .note { color:var(--muted); font-size:12.5px; }
+    .alert { background:#fdecec; border:1px solid #f3c9c9; color:var(--bad);
+             padding:10px 14px; border-radius:8px; font-size:13px;
+             margin-top:12px; }
+    .mono { font-family:ui-monospace, "Cascadia Mono", Consolas, monospace; }
+    .foot { color:var(--muted); font-size:12px; text-align:center;
+            padding:8px 0 28px; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ECG Screening System &middot; Live acquisition</h1>
+    <span class="who">{{ user["username"] }} &middot; {{ user["role"] }}</span>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('index') }}">Simulation</a>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <button type="submit">Sign out</button>
+    </form>
+  </header>
+
+  <main>
+    <div class="banner">
+      <strong>Research prototype.</strong> Not a medical device and not validated
+      for clinical use. Every output is a screening indication that recommends
+      assessment; it is never a diagnosis, and a negative result does not
+      exclude a myocardial infarction.
+    </div>
+
+    <section>
+      <h2>Device</h2>
+      <div class="controls">
+        <select id="port"><option value="">auto-detect</option></select>
+        <select id="mode" title="operating point">
+          {% for name, value in thresholds.items() %}
+          <option value="{{ name }}" {% if name == 'high_recall' %}selected{% endif %}>
+            {{ name }} ({{ '%.4f'|format(value) }})
+          </option>
+          {% endfor %}
+        </select>
+        <label class="note"><input type="checkbox" id="save"> save CSV</label>
+        <button class="primary" id="startBtn">Start</button>
+        <button id="stopBtn" disabled>Stop</button>
+        <span id="linkState" class="pill off">stopped</span>
+        <span class="note">device id <span class="mono">{{ device_id }}</span>
+          &middot; readings are stored against the patient holding it</span>
+      </div>
+      <div class="note" style="margin-top:10px">
+        The operating point sets the threshold only. <span class="mono">high_recall</span>
+        (0.2736) is tuned to miss as few infarctions as possible and therefore raises
+        many false alarms; on the test fold it flagged about a third of healthy
+        recordings. <span class="mono">default</span> (0.5) is the balanced point.
+        The model was trained on clinical PTB-XL recordings, not on AD8232 signals,
+        so live results carry that difference on top.
+      </div>
+      <div id="startError" class="alert" style="display:none"></div>
+    </section>
+
+    <section>
+      <h2>Live ECG &mdash; raw ADC counts, 100 Hz, last 10 seconds</h2>
+      <canvas id="ecg" width="1040" height="300"></canvas>
+      <div id="signalNote" class="note" style="margin-top:10px">
+        Not started.
+      </div>
+      <div class="grid">
+        <div class="tile"><div class="k">Electrodes</div>
+          <div class="v" id="leadState">&mdash;</div></div>
+        <div class="tile"><div class="k">Signal</div>
+          <div class="v" id="sigState">&mdash;</div></div>
+        <div class="tile"><div class="k">Heart rate</div>
+          <div class="v" id="bpm">&mdash;</div><div class="u">from QRS spacing</div></div>
+        <div class="tile"><div class="k">Sampling rate</div>
+          <div class="v" id="rate">&mdash;</div><div class="u">device clock</div></div>
+        <div class="tile"><div class="k">Samples</div>
+          <div class="v" id="samples">0</div><div class="u" id="errs">&nbsp;</div></div>
+        <div class="tile"><div class="k">Next window</div>
+          <div class="v" id="window">0 / 1000</div><div class="u" id="windowsDone">&nbsp;</div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Latest screening result</h2>
+      <div id="result" class="note">
+        No window has been scored yet. A window is only scored when 1000
+        consecutive samples are lead-on, gap-free, unsaturated and contain a
+        detectable heartbeat.
+      </div>
+    </section>
+
+    <div class="foot">
+      Experimental research screening result &mdash; not a clinical diagnosis.
+    </div>
+  </main>
+
+<script>
+const $ = id => document.getElementById(id);
+const canvas = $("ecg"), ctx = canvas.getContext("2d");
+let timer = null;
+
+function drawTrace(trace, leadFlags, ok) {
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // graph paper, 0.2 s and 500 counts
+  ctx.strokeStyle = "#eef2f7"; ctx.lineWidth = 1; ctx.beginPath();
+  for (let s = 0; s <= 10; s += 0.2) { const x = (s / 10) * w; ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+  for (let v = 0; v <= 4095; v += 500) { const y = h - (v / 4095) * h; ctx.moveTo(0, y); ctx.lineTo(w, y); }
+  ctx.stroke();
+
+  if (!trace || trace.length < 2) return;
+  // Autoscale to the visible trace: an ECG occupies a small part of the ADC
+  // range, and a fixed 0-4095 axis would flatten it to a line.
+  let lo = Math.min(...trace), hi = Math.max(...trace);
+  const pad = Math.max(40, (hi - lo) * 0.15); lo -= pad; hi += pad;
+  const y = v => h - ((v - lo) / (hi - lo)) * h;
+
+  ctx.strokeStyle = ok ? "#1f5fa8" : "#b0b7bf"; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  trace.forEach((v, i) => {
+    const x = (i / (trace.length - 1)) * w;
+    i ? ctx.lineTo(x, y(v)) : ctx.moveTo(x, y(v));
+  });
+  ctx.stroke();
+
+  // lead-off samples marked along the top, never hidden from the trace
+  ctx.strokeStyle = "#d9534f"; ctx.lineWidth = 2; ctx.beginPath();
+  (leadFlags || []).forEach((f, i) => {
+    if (!f) return;
+    const x = (i / (trace.length - 1)) * w;
+    ctx.moveTo(x, 4); ctx.lineTo(x, 14);
+  });
+  ctx.stroke();
+}
+
+function render(d) {
+  if (!d.running) {
+    $("linkState").className = "pill off"; $("linkState").textContent = "stopped";
+    $("signalNote").textContent = d.error ? d.error : "Not started.";
+    $("startBtn").disabled = false; $("stopBtn").disabled = true;
+    drawTrace([], [], false);
+    return;
+  }
+  $("startBtn").disabled = true; $("stopBtn").disabled = false;
+  $("linkState").className = "pill " + (d.connected ? "on" : "off");
+  $("linkState").textContent = d.connected ? ("streaming " + d.port)
+                                           : ("no link " + (d.link_error || ""));
+
+  drawTrace(d.trace, d.lead_off_flags, d.signal_ok);
+  $("signalNote").textContent = d.diagnosis || "";
+  $("leadState").innerHTML = d.lead_off
+      ? '<span class="pill mi">LEAD OFF</span>' : '<span class="pill norm">CONNECTED</span>';
+  $("sigState").innerHTML = d.signal_ok
+      ? '<span class="pill norm">AVAILABLE</span>' : '<span class="pill off">NOT AVAILABLE</span>';
+  $("bpm").textContent = d.bpm ? d.bpm + " bpm" : "—";
+  $("rate").textContent = d.rate_device_hz ? d.rate_device_hz.toFixed(2) + " Hz" : "—";
+  $("samples").textContent = d.samples;
+  $("errs").textContent = "malformed " + d.malformed + " · gaps " + d.sequence_gaps;
+  $("window").textContent = d.window_progress + " / " + d.window_length;
+  const disc = Object.entries(d.windows_discarded || {})
+      .map(([k, v]) => k.replace(/_/g, " ") + " " + v).join(", ");
+  $("windowsDone").textContent = "scored " + d.windows_done + (disc ? " · discarded: " + disc : "");
+
+  const r = d.last_result;
+  if (r) {
+    if (r.error) { $("result").innerHTML = '<span class="pill mi">error</span> ' + r.error; }
+    else {
+      const mi = r.prediction === 1;
+      $("result").innerHTML =
+        '<div style="font-size:26px;font-weight:600">' + (100 * r.probability).toFixed(1) + '%' +
+        ' <span class="pill ' + (mi ? 'mi' : 'norm') + '">' + r.label + '</span></div>' +
+        '<div class="note" style="margin-top:8px">threshold ' + r.threshold +
+        ' (' + r.mode + ') · ' + r.inference_ms + ' ms · ' + r.at +
+        ' · ' + (r.bpm ? r.bpm.toFixed(0) + ' bpm' : '') +
+        ' · ' + (r.patient_name ? 'patient: ' + r.patient_name : 'unattributed') + '</div>' +
+        (r.warning ? '<div class="alert">' + r.warning + '</div>' : '') +
+        '<div class="note" style="margin-top:8px">Experimental research screening ' +
+        'result &mdash; not a clinical diagnosis. A result above the high-recall ' +
+        'threshold is deliberately easy to trigger and is often a false alarm.</div>';
+    }
+  }
+}
+
+async function poll() {
+  try { render(await (await fetch("/api/live/data")).json()); }
+  catch (e) { $("signalNote").textContent = "lost contact with the server: " + e; }
+}
+
+async function loadPorts() {
+  try {
+    const d = await (await fetch("/api/live/ports")).json();
+    (d.ports || []).forEach(p => {
+      const o = document.createElement("option");
+      o.value = p.device;
+      o.textContent = p.device + (p.description ? " — " + p.description : "");
+      $("port").appendChild(o);
+    });
+  } catch (e) { /* the dropdown simply stays on auto-detect */ }
+}
+
+$("startBtn").onclick = async () => {
+  $("startError").style.display = "none";
+  $("startBtn").disabled = true;
+  const d = await (await fetch("/api/live/start", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({port: $("port").value, save: $("save").checked,
+                          mode: $("mode").value})
+  })).json();
+  if (!d.running) {
+    $("startError").textContent = d.error || "could not start";
+    $("startError").style.display = "block";
+    $("startBtn").disabled = false;
+  }
+  poll();
+};
+
+$("stopBtn").onclick = async () => {
+  await fetch("/api/live/stop", {method: "POST"});
+  poll();
+};
+
+loadPorts();
+poll();
+timer = setInterval(poll, 250);
+</script>
+</body>
+</html>

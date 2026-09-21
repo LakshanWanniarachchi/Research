@@ -1,0 +1,31 @@
+{% extends "auth_base.html" %}
+{% block title %}Sign in &middot; ECG Screening System{% endblock %}
+
+{% block form %}
+<h1>Sign in</h1>
+<p class="lede">Your ECG recordings are visible only to your own account.</p>
+
+<form method="post" action="{{ url_for('auth.login') }}">
+  <input type="hidden" name="next" value="{{ next }}">
+
+  <div class="field">
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" autofocus required>
+  </div>
+
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password"
+           autocomplete="current-password" data-pw required>
+  </div>
+
+  <button class="btn primary" type="submit">Sign in</button>
+</form>
+{% endblock %}
+
+{% block foot %}
+No account yet? <a href="{{ url_for('account.register') }}">Create one</a>.
+<br><br>
+On a fresh installation an <strong>admin</strong> account is created at first
+start-up and its password is printed once to the server console.
+{% endblock %}

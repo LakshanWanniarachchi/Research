@@ -1,0 +1,219 @@
+/*
+ * layout.css - the application shell.
+ *
+ * A fixed sidebar and a thin top bar on a desktop; the same sidebar as a
+ * drawer below 1024px. The shell lives in one file so that a new page gets
+ * the navigation, the disclaimer and the responsive behaviour by extending
+ * base.html and writing nothing but its own content.
+ */
+
+/* --- shell -------------------------------------------------------------- */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+/* --- sidebar ------------------------------------------------------------ */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 40;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--border);
+  min-height: var(--topbar-h);
+  color: var(--text);
+}
+.brand:hover { text-decoration: none; }
+.brand-mark {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  flex: none;
+  border-radius: var(--r-sm);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.brand-name { font-weight: 660; font-size: 15px; letter-spacing: -.01em; }
+.brand-sub  { font-size: 11px; color: var(--muted); line-height: 1.2; }
+
+.side-nav { padding: var(--s3); overflow-y: auto; flex: 1; }
+.side-nav .group {
+  font-size: 10.5px; font-weight: 660; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted);
+  padding: var(--s4) var(--s3) var(--s2);
+}
+.side-nav a {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 9px var(--s3);
+  border-radius: var(--r-sm);
+  color: var(--text-2);
+  font-size: var(--t-small);
+  font-weight: 540;
+  margin-bottom: 2px;
+}
+.side-nav a:hover { background: var(--surface-sunken); color: var(--text); text-decoration: none; }
+.side-nav a.active { background: var(--primary-soft); color: var(--primary-strong); font-weight: 620; }
+.side-nav a.active .ico { color: var(--primary); }
+.side-nav .ico { color: var(--muted); flex: none; }
+
+.side-foot { border-top: 1px solid var(--border); padding: var(--s3); }
+.side-user {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3) var(--s3);
+  min-width: 0;
+}
+.avatar {
+  width: 32px; height: 32px; flex: none;
+  border-radius: var(--r-pill);
+  background: var(--primary); color: #fff;
+  display: grid; place-items: center;
+  font-size: 12.5px; font-weight: 660;
+}
+.side-user .who { min-width: 0; }
+.side-user .who b { display: block; font-size: var(--t-small); font-weight: 620;
+                    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-user .who span { font-size: 11.5px; color: var(--muted); }
+.side-foot form { margin: 0; }
+.side-foot .btn { width: 100%; justify-content: center; }
+
+/* --- main column -------------------------------------------------------- */
+.main { display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  min-height: var(--topbar-h);
+  display: flex; align-items: center; gap: var(--s4);
+  padding: var(--s2) var(--s6);
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: var(--t-page); letter-spacing: -.015em; }
+.topbar .crumb { font-size: var(--t-small); color: var(--muted); }
+.topbar .top-actions { margin-left: auto; display: flex; align-items: center; gap: var(--s3); }
+
+.menu-btn {
+  display: none;
+  background: none; border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 6px;
+  color: var(--text-2); cursor: pointer;
+}
+
+.content { padding: var(--s6); padding-bottom: var(--s8); width: 100%; max-width: 1360px; }
+
+.scrim {
+  position: fixed; inset: 0; z-index: 35;
+  background: rgba(16, 32, 46, .38);
+  opacity: 0; pointer-events: none;
+  transition: opacity .18s ease;
+}
+
+/* --- grids -------------------------------------------------------------- */
+.grid { display: grid; gap: var(--s4); margin-bottom: var(--s5); }
+.grid.stats  { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.grid.halves { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+/* The live monitor: waveform wide, status rail beside it. */
+/* align-items: start, or a short card is stretched to match a tall one and
+   ends in a block of empty white. */
+.grid.monitor { grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); align-items: start; }
+.grid.report  { grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); align-items: start; }
+
+/* --- authentication pages ----------------------------------------------- */
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+}
+.auth-art {
+  position: relative;
+  background: linear-gradient(160deg, #0b3f6d 0%, #10202e 100%);
+  color: var(--on-dark);
+  padding: var(--s8) clamp(28px, 5vw, 64px);
+  display: flex; flex-direction: column; justify-content: center;
+  overflow: hidden;
+}
+.auth-art .brand-mark { background: rgba(255, 255, 255, .10); color: #cfe6fb; }
+.auth-art h2 { font-size: clamp(22px, 2.4vw, 30px); letter-spacing: -.02em; margin-bottom: var(--s4); }
+.auth-art p  { color: #b7cde2; max-width: 44ch; font-size: 14.5px; }
+.auth-art .points { list-style: none; padding: 0; margin: var(--s6) 0 0; }
+.auth-art .points li {
+  display: flex; gap: var(--s3); align-items: flex-start;
+  color: #cfe0ef; font-size: 13.5px; margin-bottom: var(--s3);
+}
+.auth-art .points .ico { color: #6fb3ea; flex: none; margin-top: 2px; }
+.auth-trace { position: absolute; left: 0; right: 0; bottom: 8%; opacity: .5; pointer-events: none; }
+
+.auth-form {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--s8) clamp(24px, 4vw, 56px);
+  background: var(--surface);
+}
+.auth-form .inner { width: 100%; max-width: 380px; margin: 0 auto; }
+.auth-form h1 { font-size: 21px; margin-bottom: var(--s1); }
+.auth-form .lede { color: var(--muted); font-size: var(--t-small); margin-bottom: var(--s6); }
+.auth-form .btn.primary { width: 100%; justify-content: center; margin-top: var(--s2); }
+.auth-foot {
+  margin-top: var(--s6); padding-top: var(--s4);
+  border-top: 1px solid var(--border);
+  font-size: var(--t-caption); color: var(--muted);
+}
+
+/* --- responsive --------------------------------------------------------- */
+@media (max-width: 1180px) {
+  .grid.monitor, .grid.report { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w);
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+    box-shadow: var(--shadow-2);
+  }
+  .app.nav-open .sidebar { transform: none; }
+  .app.nav-open .scrim { opacity: 1; pointer-events: auto; }
+  .menu-btn { display: grid; place-items: center; }
+  .content { padding: var(--s5); padding-bottom: var(--s8); }
+  .topbar { padding: var(--s2) var(--s5); }
+}
+
+@media (max-width: 860px) {
+  .auth { grid-template-columns: minmax(0, 1fr); }
+  /* The illustration becomes a header band rather than disappearing: it
+     carries the research-prototype framing, which must not be lost. */
+  .auth-art { min-height: auto; padding: var(--s6) var(--s5); justify-content: flex-start; }
+  .auth-art .points, .auth-trace { display: none; }
+  .auth-form { padding: var(--s6) var(--s5) var(--s8); }
+}
+
+@media (max-width: 640px) {
+  :root { --t-page: 19px; }
+  .content { padding: var(--s4); padding-bottom: var(--s7); }
+  .topbar { padding: var(--s2) var(--s4); gap: var(--s3); }
+  .grid { gap: var(--s3); }
+}
+
+@media (max-width: 380px) {
+  .content { padding: var(--s3); }
+  .topbar { padding: var(--s2) var(--s3); }
+}
+
+@media print {
+  .sidebar, .topbar, .scrim, .no-print { display: none !important; }
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .content { padding: 0; max-width: none; }
+  body { background: #fff; }
+  .card { box-shadow: none; break-inside: avoid; }
+}

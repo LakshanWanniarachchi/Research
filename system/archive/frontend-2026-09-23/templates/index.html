@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heart Attack Detection System</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #0e1117; color: #e6edf3;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+
+  header { border-bottom: 1px solid #30363d; padding-bottom: 14px; margin-bottom: 20px; }
+  h1 { margin: 0 0 6px; font-size: 20px; }
+  .sub { color: #8b949e; font-size: 13px; }
+  .note {
+    background: #1c2128; border-left: 3px solid #d29922;
+    padding: 8px 12px; margin-top: 12px;
+    font-size: 12px; color: #c9d1d9; border-radius: 0 4px 4px 0;
+  }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+  button {
+    background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+    padding: 9px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+  button:hover:not(:disabled) { background: #30363d; }
+  button:disabled { opacity: .5; cursor: wait; }
+  button.mi     { border-color: #6e2a2a; }
+  button.normal { border-color: #2a5c3f; }
+
+  .modes { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .modes span { font-size: 12px; color: #8b949e; margin-right: 4px; }
+  .mode-btn { padding: 6px 11px; font-size: 12px; }
+  .mode-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+
+  canvas { width: 100%; height: 220px; background: #fff; border-radius: 8px; display: block; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+  @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .card h2 {
+    margin: 0 0 12px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .06em; color: #8b949e; font-weight: 600;
+  }
+
+  .verdict { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .verdict.mi     { color: #f85149; }
+  .verdict.normal { color: #3fb950; }
+  .muted { color: #8b949e; font-size: 12px; }
+
+  .bar-wrap { margin-top: 14px; }
+  .bar { position: relative; height: 24px; background: #21262d; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, #3fb950, #d29922, #f85149); transition: width .3s; }
+  .bar-thr { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #58a6ff; }
+  .bar-labels { display: flex; justify-content: space-between; font-size: 11px; color: #8b949e; margin-top: 5px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-weight: 600; }
+  .right { text-align: right; }
+  .ok  { color: #3fb950; }
+  .bad { color: #f85149; }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #21262d; color: #8b949e; }
+
+  .patient-bar {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 16px;
+  }
+  .patient-bar .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .patient-bar label { font-size: 12px; color: #8b949e; }
+  .patient-bar a { color: #58a6ff; font-size: 12px; text-decoration: none; }
+  .patient-bar a:hover { text-decoration: underline; }
+  .link-btn { padding: 4px 10px; font-size: 12px; }
+
+  select, input {
+    background: #0d1117; color: #e6edf3; border: 1px solid #30363d;
+    padding: 7px 10px; border-radius: 6px; font-size: 13px;
+    font-family: inherit;
+  }
+  select { min-width: 240px; }
+
+  /* The enrol form stays out of the way until it is wanted. */
+  .enrol { display: none; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+           padding-top: 12px; border-top: 1px solid #21262d; }
+  .enrol.open { display: flex; }
+  code { background: #21262d; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Heart Attack Detection System</h1>
+    <div class="sub">
+      Single-lead ECG (Lead I) &rarr; 1D CNN &rarr; heart-risk verdict.
+      Test-fold ROC-AUC {{ roc_auc }} &middot;
+      {{ n_total }} recordings in the database.
+    </div>
+    <div class="note">
+      <strong>Simulation mode.</strong> This page replays one of the {{ n_test }} real
+      recordings in <strong>fold 10</strong> &mdash; the test set the model never saw while
+      training &mdash; through exactly the same code a live signal uses. Every result below is
+      saved into the SQLite database.
+      For a signal acquired from the AD8232 and ESP32 over USB, see
+      <a href="{{ url_for('live_page') }}">Live ECG</a>.
+    </div>
+  </header>
+
+  <div class="patient-bar">
+    <div class="row">
+      <label for="patientSelect">Patient</label>
+      <select id="patientSelect" onchange="onPatientChange()">
+        <option value="">— not assigned to a patient —</option>
+      </select>
+      <a id="patientLink" href="#" style="display:none">open record &rarr;</a>
+      <button class="link-btn" onclick="
+        document.getElementById('enrolForm').classList.toggle('open')">
+        + enrol
+      </button>
+    </div>
+
+    <div id="enrolForm" class="enrol">
+      <input id="pName"   placeholder="Full name">
+      <input id="pAge"    placeholder="Age" type="number" min="0" max="120" style="width:80px">
+      <select id="pSex">
+        <option value="">Sex</option>
+        <option value="M">M</option>
+        <option value="F">F</option>
+      </select>
+      <input id="pDevice" placeholder="Device id (e.g. ESP32-001)">
+      <button onclick="enrolPatient()">Enrol</button>
+      <div class="muted" style="flex-basis:100%; margin-top:6px">
+        The device id binds one ESP32 to this patient, so anything it POSTs to
+        <code>/api/predict</code> is filed under their name. Demographics are
+        entered by hand and are illustrative &mdash; PTB-XL's patient metadata is
+        not part of this dataset.
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="mi"     onclick="loadRecord('mi')">Random heart attack</button>
+    <button class="normal" onclick="loadRecord('normal')">Random normal</button>
+    <button              onclick="loadRecord('any')">Random any</button>
+
+    <div class="modes">
+      <span>Operating point:</span>
+      {% for name, value in thresholds.items() %}
+        <button class="mode-btn" data-mode="{{ name }}" onclick="setMode('{{ name }}')">
+          {{ name }}
+        </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <canvas id="ecg" width="1000" height="220"></canvas>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Model verdict</h2>
+      <div id="verdict" class="verdict muted">Press a button to load a recording</div>
+      <div id="truth" class="muted"></div>
+
+      <div class="bar-wrap">
+        <div class="bar">
+          <div id="barFill" class="bar-fill" style="width:0%"></div>
+          <div id="barThr"  class="bar-thr"  style="left:0%"></div>
+        </div>
+        <div class="bar-labels">
+          <span>0.0 &mdash; certainly normal</span>
+          <span id="probText">&mdash;</span>
+          <span>1.0 &mdash; certainly MI</span>
+        </div>
+      </div>
+
+      <table style="margin-top:14px">
+        <tr><td>Probability of MI</td><td class="right" id="tProb">&mdash;</td></tr>
+        <tr><td>Threshold used</td><td class="right" id="tThr">&mdash;</td></tr>
+        <tr><td>Model time</td><td class="right" id="tMs">&mdash;</td></tr>
+        <tr><td>Recording id</td><td class="right" id="tId">&mdash;</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Recent predictions (from the database)</h2>
+      <div id="stats" class="muted" style="margin-bottom:10px">&mdash;</div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Source</th><th class="right">Prob.</th>
+            <th>Said</th><th>Truth</th><th class="right">ms</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="6" class="muted">No predictions yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// The thresholds Flask worked out during training.
+const THRESHOLDS = {{ thresholds | tojson }};
+const SAMPLE_RATE = {{ sample_rate }};
+
+let currentMode = "high_recall";
+let lastSignal = null;
+// Remembered so a re-score can keep showing the right answer for the trace on
+// screen; a re-score never learns the truth by itself.
+let lastTruth = null;
+let lastRecordingId = null;
+
+// -------------------------------------------------------------------------
+// Drawing the ECG on the canvas
+// -------------------------------------------------------------------------
+function drawSignal(signal) {
+  const canvas = document.getElementById("ecg");
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, w, h);
+
+  if (!signal || !signal.length) return;
+
+  // Faint grid, one line per second, like real ECG paper.
+  ctx.strokeStyle = "#f0d6d6";
+  ctx.lineWidth = 1;
+  for (let s = 0; s <= signal.length / SAMPLE_RATE; s++) {
+    const x = (s * SAMPLE_RATE / signal.length) * w;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+
+  // Scale the trace so it fills the box neatly whatever its size.
+  const min = Math.min(...signal), max = Math.max(...signal);
+  const range = (max - min) || 1;
+  const pad = 12;
+
+  ctx.strokeStyle = "#c0392b";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  signal.forEach((v, i) => {
+    const x = (i / (signal.length - 1)) * w;
+    const y = h - pad - ((v - min) / range) * (h - 2 * pad);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+// -------------------------------------------------------------------------
+// Showing a result
+// -------------------------------------------------------------------------
+function showResult(data) {
+  const isMI = data.prediction === 1;
+
+  const verdict = document.getElementById("verdict");
+  verdict.textContent = data.label;
+  verdict.className = "verdict " + (isMI ? "mi" : "normal");
+
+  const truth = document.getElementById("truth");
+  if (data.truth_label !== undefined) {
+    truth.innerHTML = data.correct
+      ? `<span class="ok">Correct</span> &mdash; the real diagnosis is ${data.truth_label}.`
+      : `<span class="bad">Wrong</span> &mdash; the real diagnosis is ${data.truth_label}.`;
+  } else {
+    truth.textContent = "";
+  }
+
+  document.getElementById("barFill").style.width = (data.probability * 100) + "%";
+  document.getElementById("barThr").style.left  = (data.threshold * 100) + "%";
+  document.getElementById("probText").textContent =
+      `probability ${data.probability.toFixed(4)} vs threshold ${data.threshold.toFixed(4)}`;
+
+  document.getElementById("tProb").textContent = data.probability.toFixed(4);
+  document.getElementById("tThr").textContent  = `${data.threshold.toFixed(4)} (${data.mode})`;
+  document.getElementById("tMs").textContent   = `${data.inference_ms} ms`;
+  document.getElementById("tId").textContent   = data.recording_id ?? "—";
+}
+
+// -------------------------------------------------------------------------
+// Talking to the server
+// -------------------------------------------------------------------------
+function setButtonsDisabled(state) {
+  document.querySelectorAll("button").forEach(b => b.disabled = state);
+}
+
+async function loadRecord(type) {
+  setButtonsDisabled(true);
+  try {
+    const patientId = document.getElementById("patientSelect").value;
+    let url = `/api/record?type=${type}&mode=${currentMode}`;
+    if (patientId) url += `&patient_id=${patientId}`;
+
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data.error) { alert(data.error); return; }
+
+    lastSignal = data.signal;
+    lastTruth = data.truth;
+    lastRecordingId = data.recording_id;
+    drawSignal(data.signal);
+    showResult(data);
+    loadHistory();
+  } catch (e) {
+    alert("Could not reach the server: " + e);
+  } finally {
+    setButtonsDisabled(false);
+  }
+}
+
+// -------------------------------------------------------------------------
+// Patients
+// -------------------------------------------------------------------------
+async function loadPatients() {
+  const r = await fetch("/api/patients");
+  const data = await r.json();
+
+  const sel = document.getElementById("patientSelect");
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">— not assigned to a patient —</option>' +
+    data.patients.map(p =>
+      `<option value="${p.id}">${p.name}${p.device_id ? " · " + p.device_id : ""}` +
+      ` (${p.n_predictions} reading${p.n_predictions === 1 ? "" : "s"})</option>`
+    ).join("");
+  sel.value = keep;
+
+  const link = document.getElementById("patientLink");
+  link.style.display = sel.value ? "inline" : "none";
+  link.href = sel.value ? `/patient/${sel.value}` : "#";
+}
+
+function onPatientChange() {
+  const sel = document.getElementById("patientSelect");
+  const link = document.getElementById("patientLink");
+  link.style.display = sel.value ? "inline" : "none";
+  link.href = sel.value ? `/patient/${sel.value}` : "#";
+}
+
+async function enrolPatient() {
+  const name = document.getElementById("pName").value.trim();
+  if (!name) { alert("A patient needs a name."); return; }
+
+  const body = {
+    name: name,
+    age: parseInt(document.getElementById("pAge").value, 10) || null,
+    sex: document.getElementById("pSex").value || null,
+    device_id: document.getElementById("pDevice").value.trim() || null
+  };
+
+  const r = await fetch("/api/patients", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await r.json();
+  if (data.error) { alert(data.error); return; }
+
+  document.getElementById("pName").value = "";
+  document.getElementById("pAge").value = "";
+  document.getElementById("pDevice").value = "";
+  await loadPatients();
+  document.getElementById("patientSelect").value = data.id;
+  onPatientChange();
+}
+
+// Re-score the SAME recording at a different operating point, so you can
+// watch the verdict change as the threshold moves.
+//
+// This posts to /api/rescore, NOT /api/predict. /api/predict would store each
+// flip as a new reading from a device with no known truth, so simply looking
+// at a recording three ways would add three misleading rows to the results.
+// Re-scoring is a view, not an event, so nothing is written.
+async function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll(".mode-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.mode === mode));
+
+  if (!lastSignal) return;
+
+  setButtonsDisabled(true);
+  try {
+    const r = await fetch("/api/rescore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signal: lastSignal, mode: mode })
+    });
+    const data = await r.json();
+    if (data.error) { alert(data.error); return; }
+
+    // Keep the truth banner from the recording we are looking at: re-scoring
+    // does not change what the patient actually had.
+    if (lastTruth !== null) {
+      data.truth = lastTruth;
+      data.truth_label = lastTruth ? "MI" : "Normal";
+      data.correct = data.prediction === lastTruth;
+      data.recording_id = lastRecordingId;
+    }
+    showResult(data);
+    // No loadHistory() - nothing was stored, so the history cannot have changed.
+  } finally {
+    setButtonsDisabled(false);
+  }
+}
+
+async function loadHistory() {
+  const r = await fetch("/api/history?limit=10");
+  const data = await r.json();
+
+  const s = data.stats;
+  document.getElementById("stats").textContent =
+    `${s.total} prediction(s) stored · average model time ${s.avg_inference_ms} ms` +
+    (s.accuracy_so_far !== null
+      ? ` · correct on ${(s.accuracy_so_far * 100).toFixed(1)}% of the ${s.n_with_known_truth} with a known answer`
+      : "");
+
+  const body = document.getElementById("historyBody");
+  if (!data.predictions.length) {
+    body.innerHTML = '<tr><td colspan="6" class="muted">No predictions yet.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = data.predictions.map(p => `
+    <tr>
+      <td>${p.id}</td>
+      <td><span class="tag">${p.source}</span></td>
+      <td class="right">${p.probability.toFixed(3)}</td>
+      <td class="${p.prediction ? "bad" : "ok"}">${p.prediction ? "MI" : "Normal"}</td>
+      <td>${p.truth === null ? "—" : (p.truth ? "MI" : "Normal")}</td>
+      <td class="right">${p.inference_ms.toFixed(0)}</td>
+    </tr>`).join("");
+}
+
+// Start-up
+setMode("high_recall");
+loadPatients();
+loadHistory();
+</script>
+</body>
+</html>

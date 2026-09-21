@@ -1,0 +1,44 @@
+==============================================================
+TEST-SET RESULTS  (fold 10 - never used for training or tuning)
+==============================================================
+ROC-AUC : 0.8834   (how well the two classes separate)
+PR-AUC  : 0.8648   (the fairer headline on uneven data)
+
+--- operating point: default  (threshold 0.5000) ---
+  Accuracy   : 0.8249
+  Precision  : 0.8483   (of the MI alarms, how many were right)
+  Recall     : 0.6509   (of the real MIs, how many we caught)
+  Specificity: 0.9298   (of the healthy, how many we left alone)
+  F1-score   : 0.7366
+
+  Confusion matrix (rows = truth, columns = what we said):
+                   said Normal   said MI
+    truly Normal         848        64
+    truly MI             192       358
+  MISSED HEART ATTACKS: 192   <- the most costly mistake
+
+--- operating point: best_f1  (threshold 0.3800) ---
+  Accuracy   : 0.8140
+  Precision  : 0.7518   (of the MI alarms, how many were right)
+  Recall     : 0.7545   (of the real MIs, how many we caught)
+  Specificity: 0.8498   (of the healthy, how many we left alone)
+  F1-score   : 0.7532
+
+  Confusion matrix (rows = truth, columns = what we said):
+                   said Normal   said MI
+    truly Normal         775       137
+    truly MI             135       415
+  MISSED HEART ATTACKS: 135   <- the most costly mistake
+
+--- operating point: high_recall  (threshold 0.1700) ---
+  Accuracy   : 0.6601
+  Precision  : 0.5275   (of the MI alarms, how many were right)
+  Recall     : 0.9255   (of the real MIs, how many we caught)
+  Specificity: 0.5000   (of the healthy, how many we left alone)
+  F1-score   : 0.6719
+
+  Confusion matrix (rows = truth, columns = what we said):
+                   said Normal   said MI
+    truly Normal         456       456
+    truly MI              41       509
+  MISSED HEART ATTACKS: 41   <- the most costly mistake

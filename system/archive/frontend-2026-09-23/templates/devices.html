@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active = 'devices' %}
+{% block title %}Devices &middot; ECG Screening System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>My devices</h1>
+  <span class="sub">An ECG published by one of these devices becomes your recording.</span>
+</div>
+
+<div class="card">
+  <h2>Registered devices</h2>
+  {% if devices %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Device ID</th><th>Label</th><th>State</th><th>Rate</th>
+          <th>Samples</th><th>Reports</th><th>Last seen</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in devices %}
+        {% set state = live.get(d["device_id"], {}) %}
+        <tr>
+          <td class="mono">{{ d["device_id"] }}</td>
+          <td>{{ d["label"] or "—" }}</td>
+          <td>
+            {% if state.online %}<span class="pill ok">RECEIVING</span>
+            {% else %}<span class="pill off">OFFLINE</span>{% endif %}
+          </td>
+          <td>{% if state.rate_hz %}{{ "%.2f"|format(state.rate_hz) }} Hz{% else %}—{% endif %}</td>
+          <td>{{ state.samples or 0 }}</td>
+          <td>{{ d["reports"] }}</td>
+          <td>{{ d["last_seen"] or d["last_report"] or "—" }}</td>
+          <td>
+            <form method="post" style="margin:0"
+                  onsubmit="return confirm('Unlink {{ d["device_id"] }} from your account?');">
+              <input type="hidden" name="action" value="release">
+              <input type="hidden" name="device_id" value="{{ d["device_id"] }}">
+              <button class="danger" type="submit">Unlink</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">
+    No device is linked yet. Add the device id your ESP32 prints on its serial
+    console at start-up, for example <span class="mono">ESP32-001</span>.
+  </p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Link a device</h2>
+  <form method="post">
+    <input type="hidden" name="action" value="claim">
+    <div class="form-row">
+      <div class="field" style="min-width:200px">
+        <label for="device_id">Device ID</label>
+        <input type="text" id="device_id" name="device_id" placeholder="ESP32-001" required>
+      </div>
+      <div class="field" style="min-width:200px">
+        <label for="label">Label (optional)</label>
+        <input type="text" id="label" name="label" placeholder="Bench unit">
+      </div>
+      <div class="field">
+        <button class="primary" type="submit">Link device</button>
+      </div>
+    </div>
+  </form>
+  <div class="disclaimer">
+    A device id can belong to one account at a time. The device itself never
+    learns who owns it: it publishes under its own id, and the broker only
+    allows it to publish on its own topics.
+  </div>
+</div>
+{% endblock %}

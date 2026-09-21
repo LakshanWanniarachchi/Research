@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% set active = 'dashboard' %}
+{% block title %}Dashboard &middot; ECG Screening System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Dashboard</h1>
+  <span class="sub">
+    {% if user["full_name"] %}{{ user["full_name"] }}{% else %}{{ user["username"] }}{% endif %}
+    {%- if age is not none %} &middot; {{ age }} years{% endif %}
+    {%- if user["height_cm"] %} &middot; {{ user["height_cm"] }} cm{% endif %}
+    {%- if user["weight_kg"] %} &middot; {{ user["weight_kg"] }} kg{% endif %}
+  </span>
+  <span style="margin-left:auto">
+    <a class="btn primary" href="{{ url_for('ecg.live') }}">Start monitoring</a>
+  </span>
+</div>
+
+{% if not user["dob"] and not user["height_cm"] and not user["weight_kg"] %}
+<div class="flash ok">
+  Your profile is empty. Add your date of birth, height and weight on the
+  <a href="{{ url_for('account.profile') }}">Profile</a> page so recordings
+  carry them.
+</div>
+{% endif %}
+
+<div class="grid kpi">
+  <div class="tile"><div class="k">ECG recordings</div>
+    <div class="v">{{ stats.total }}</div><div class="u">10 seconds each</div></div>
+  <div class="tile"><div class="k">Normal</div>
+    <div class="v">{{ stats.normal }}</div></div>
+  <div class="tile"><div class="k">MI-flagged</div>
+    <div class="v">{{ stats.flagged }}</div><div class="u">screening flags, not diagnoses</div></div>
+  <div class="tile"><div class="k">Latest recording</div>
+    <div class="v" style="font-size:16px">{{ stats.last_at or "—" }}</div></div>
+</div>
+
+<div class="grid two">
+  <div class="card">
+    <h2>Recent recordings</h2>
+    {% if recent %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Time</th><th>Result</th><th>Probability</th><th>Device</th><th></th></tr></thead>
+        <tbody>
+          {% for r in recent %}
+          <tr>
+            <td>{{ r["created_at"][:10] }}</td>
+            <td>{{ r["created_at"][11:16] }}</td>
+            <td>{% if r["prediction"] == 1 %}<span class="pill mi">MI pattern</span>
+                {% else %}<span class="pill normal">Normal</span>{% endif %}</td>
+            <td class="mono">{{ "%.3f"|format(r["probability"]) }}</td>
+            <td class="mono">{{ r["device_id"] or "—" }}</td>
+            <td><a class="btn" href="{{ url_for('ecg.report', report_id=r['id']) }}">View</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px"><a href="{{ url_for('ecg.history') }}">See all recordings →</a></div>
+    {% else %}
+    <p class="empty">
+      No ECG recordings yet. Link your device on the
+      <a href="{{ url_for('account.devices') }}">Devices</a> page, then open
+      <a href="{{ url_for('ecg.live') }}">Live ECG</a> and connect the electrodes.
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>System status</h2>
+    <table>
+      <tr><th>MQTT broker</th>
+        <td>
+          {% if mqtt_connected %}<span class="pill ok">CONNECTED</span>
+          {% elif mqtt_enabled %}<span class="pill bad">DISCONNECTED</span>
+          {% else %}<span class="pill off">DISABLED</span>{% endif %}
+          <span class="mono" style="color:var(--muted)">{{ mqtt_host }}:{{ mqtt_port }}</span>
+        </td></tr>
+      <tr><th>Messages received</th>
+        <td>{{ mqtt_messages }}{% if mqtt_rejected %} &middot; {{ mqtt_rejected }} rejected{% endif %}</td></tr>
+      <tr><th>Device token required</th><td>{{ "yes" if require_token else "no" }}</td></tr>
+      <tr><th>Model</th><td>{{ model_name }}</td></tr>
+      <tr><th>Model version</th><td class="mono">{{ model_version }}</td></tr>
+      <tr><th>Test-fold ROC-AUC</th><td>{{ roc_auc }}</td></tr>
+      <tr><th>Band-pass filter</th><td>{{ "on" if bandpass else "off (this model was trained without it)" }}</td></tr>
+      <tr><th>Operating points</th>
+        <td class="mono">{% for name, value in thresholds.items() %}{{ name }} {{ "%.4f"|format(value) }}{% if not loop.last %} · {% endif %}{% endfor %}</td></tr>
+      <tr><th>Database</th><td><span class="pill ok">CONNECTED</span> {{ n_test }} held-out recordings for replay</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>My devices</h2>
+  {% if devices %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Device</th><th>Label</th><th>State</th><th>Rate</th><th>Recordings</th><th>Last seen</th></tr></thead>
+      <tbody>
+        {% for d in devices %}
+        <tr>
+          <td class="mono">{{ d["device_id"] }}</td>
+          <td>{{ d["label"] or "—" }}</td>
+          <td>{% if d["online"] %}<span class="pill ok">RECEIVING</span>
+              {% else %}<span class="pill off">OFFLINE</span>{% endif %}</td>
+          <td>{% if d["rate_hz"] %}{{ "%.2f"|format(d["rate_hz"]) }} Hz{% else %}—{% endif %}</td>
+          <td>{{ d["reports"] }}</td>
+          <td>{{ d["last_seen"] or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">
+    No device linked. Add one on the
+    <a href="{{ url_for('account.devices') }}">Devices</a> page.
+  </p>
+  {% endif %}
+</div>
+
+<div class="disclaimer">
+  Research screening result &mdash; not a clinical diagnosis. The model was
+  trained on PTB-XL clinical recordings; signals acquired through the AD8232
+  carry that difference on top of the model's own error.
+</div>
+{% endblock %}

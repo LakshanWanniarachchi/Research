@@ -1,0 +1,68 @@
+{
+  "snapshot": {
+    "beat_strength": 1.0,
+    "bpm": 61,
+    "connected": true,
+    "diagnosis": "Signal available - beat 61 bpm (strength 1.00)",
+    "disclaimer": "Experimental research screening result - not a clinical diagnosis.",
+    "lead_off": false,
+    "link_error": "",
+    "malformed": 0,
+    "port": "COM7",
+    "rate_device_hz": 100.0,
+    "rate_host_hz": 100.0,
+    "running": true,
+    "samples": 3073,
+    "sequence_gaps": 0,
+    "signal_ok": true,
+    "uptime_s": 30.9,
+    "window_length": 1000,
+    "window_progress": 73,
+    "windows_discarded": {},
+    "windows_done": 3
+  },
+  "results": [
+    {
+      "at": "18:14:38",
+      "beat_strength": 1.0,
+      "bpm": 65.6,
+      "device_id": "ESP32-001",
+      "inference_ms": 2334.0,
+      "label": "MI PATTERN DETECTED",
+      "measured_rate_hz": 100.0,
+      "mode": "high_recall",
+      "patient_name": "Ranjith Perera",
+      "prediction": 1,
+      "probability": 0.2858,
+      "threshold": 0.2736
+    },
+    {
+      "at": "18:14:46",
+      "beat_strength": 0.75,
+      "bpm": 60.6,
+      "device_id": "ESP32-001",
+      "inference_ms": 334.3,
+      "label": "MI PATTERN DETECTED",
+      "measured_rate_hz": 100.0,
+      "mode": "high_recall",
+      "patient_name": "Ranjith Perera",
+      "prediction": 1,
+      "probability": 0.3676,
+      "threshold": 0.2736
+    },
+    {
+      "at": "18:14:56",
+      "beat_strength": 1.0,
+      "bpm": 60.6,
+      "device_id": "ESP32-001",
+      "inference_ms": 333.5,
+      "label": "MI PATTERN DETECTED",
+      "measured_rate_hz": 100.0,
+      "mode": "high_recall",
+      "patient_name": "Ranjith Perera",
+      "prediction": 1,
+      "probability": 0.529,
+      "threshold": 0.2736
+    }
+  ]
+}

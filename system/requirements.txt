@@ -1,0 +1,24 @@
+# Python libraries this system needs.
+# Install them all with:   pip install -r requirements.txt
+
+numpy           # holds the ECG signals as fast arrays
+scipy           # the 0.5-40 Hz band-pass filter (signal.butter / filtfilt)
+scikit-learn    # the scoring functions (accuracy, recall, ROC-AUC ...)
+tensorflow      # builds and trains the 1D CNN
+flask           # the web server
+werkzeug        # password hashing (ships with flask, named here deliberately)
+paho-mqtt       # the MQTT client used by the bridge and the device simulator
+requests        # used by esp32_simulator.py to POST readings over HTTP
+pyserial        # ecg_serial_monitor.py reads the ESP32 over USB serial
+matplotlib      # ecg_serial_monitor.py live ECG display
+
+# Development only
+pytest          # the test suite in tests/
+
+# Note: SQLite needs no entry here. Python's `sqlite3` module is part of the
+# standard library, so the database works with nothing extra installed.
+#
+# The MQTT BROKER is not a Python package and is not installed by pip. It is a
+# separate service; see mosquitto/mosquitto.conf. Mosquitto is used rather than
+# writing a broker, because re-implementing mature security-sensitive
+# infrastructure would add risk and no research value.

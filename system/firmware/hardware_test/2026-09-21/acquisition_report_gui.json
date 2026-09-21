@@ -1,0 +1,42 @@
+{
+  "port": "COM7",
+  "baud": 115200,
+  "elapsed_s": 29.85,
+  "samples": 2950,
+  "status_lines": 2,
+  "boot_or_other_text_lines": 10,
+  "malformed_lines": 0,
+  "sequence_gaps": 0,
+  "device_dt_us": {
+    "mean": 9999.997,
+    "sd": 0.297,
+    "min": 9992,
+    "max": 10001
+  },
+  "device_rate_hz": 100.0,
+  "pc_arrival_rate_hz": 100.011,
+  "pc_arrival_span_s": 29.487,
+  "lead_off_fraction": 0.4966,
+  "lo_plus_high_fraction": 0.4966,
+  "lo_minus_high_fraction": 0.0,
+  "adc": {
+    "min": 0,
+    "max": 4095,
+    "mean": 1951.4,
+    "std": 1942.7,
+    "rail_fraction": 0.8376
+  },
+  "windows_completed": 0,
+  "windows_discarded": {
+    "lead_off": 1464
+  },
+  "last_status_lines": [
+    "ECG_SERIAL v1 fs_hz=100 adc_bits=12 atten=11db ecg_pin=36 lo_plus_pin=12 lo_minus_pin=13",
+    "columns: seq,t_us,ecg_adc,lo_plus,lo_minus"
+  ],
+  "error": "",
+  "csv": null,
+  "model": "1D CNN ensemble (5 models, mean of their probabilities)",
+  "predictions": [],
+  "disclaimer": "Experimental research screening result - not a clinical diagnosis."
+}

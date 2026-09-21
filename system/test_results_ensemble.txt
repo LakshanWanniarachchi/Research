@@ -1,0 +1,47 @@
+ENSEMBLE OF 5 - TEST-SET RESULTS  (system/ensemble, PTB-XL fold 10)
+======================================================================
+Recordings: 1462  (550 MI, 912 Normal)
+ROC-AUC : 0.9079
+PR-AUC  : 0.8957
+
+Individual members: 0.9054, 0.9063, 0.9062, 0.9020, 0.9044
+
+--- operating point: default  (threshold 0.5000) ---
+  Accuracy   : 0.8488
+  Precision  : 0.8538
+  Recall     : 0.7218
+  Specificity: 0.9254
+  F1-score   : 0.7823
+
+  Confusion matrix (rows = truth, columns = what we said):
+                   said Normal   said MI
+    truly Normal         844        68
+    truly MI             153       397
+  MISSED HEART ATTACKS: 153
+
+--- operating point: best_f1  (threshold 0.4433) ---
+  Accuracy   : 0.8454
+  Precision  : 0.8127
+  Recall     : 0.7655
+  Specificity: 0.8936
+  F1-score   : 0.7884
+
+  Confusion matrix (rows = truth, columns = what we said):
+                   said Normal   said MI
+    truly Normal         815        97
+    truly MI             129       421
+  MISSED HEART ATTACKS: 129
+
+--- operating point: high_recall  (threshold 0.2736) ---
+  Accuracy   : 0.7661
+  Precision  : 0.6323
+  Recall     : 0.9036
+  Specificity: 0.6831
+  F1-score   : 0.7440
+
+  Confusion matrix (rows = truth, columns = what we said):
+                   said Normal   said MI
+    truly Normal         623       289
+    truly MI              53       497
+  MISSED HEART ATTACKS: 53
+

@@ -1,0 +1,47 @@
+{% extends "auth_base.html" %}
+{% block title %}Create account &middot; ECG Screening System{% endblock %}
+
+{% block form %}
+<h1>Create an account</h1>
+<p class="lede">
+  Only a username and a password. Your date of birth, height and weight are
+  optional and are added later on the profile page.
+</p>
+
+<form method="post" novalidate>
+  <div class="field">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" autocomplete="username"
+           value="{{ values.username or '' }}" autofocus required
+           {% if errors.username %}aria-invalid="true" aria-describedby="e-username"{% endif %}>
+    {% if errors.username %}<div class="err" id="e-username">{{ errors.username }}</div>{% endif %}
+  </div>
+
+  <div class="field">
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password"
+           autocomplete="new-password" data-pw required
+           {% if errors.password %}aria-invalid="true" aria-describedby="e-password"{% endif %}>
+    <div class="pw-meter" data-pw-meter="password" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    {% if errors.password %}<div class="err" id="e-password">{{ errors.password }}</div>
+    {% else %}<div class="hint">At least 8 characters.</div>{% endif %}
+  </div>
+
+  <div class="field">
+    <label for="confirm">Repeat password</label>
+    <input type="password" id="confirm" name="confirm"
+           autocomplete="new-password" data-pw required
+           {% if errors.confirm %}aria-invalid="true" aria-describedby="e-confirm"{% endif %}>
+    {% if errors.confirm %}<div class="err" id="e-confirm">{{ errors.confirm }}</div>{% endif %}
+  </div>
+
+  <button class="btn primary" type="submit">Create account</button>
+</form>
+{% endblock %}
+
+{% block foot %}
+Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a>.
+<br><br>
+This is a research prototype. Do not use it to make decisions about anyone&rsquo;s
+health.
+{% endblock %}

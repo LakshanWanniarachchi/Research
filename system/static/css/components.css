@@ -1,0 +1,426 @@
+/*
+ * components.css - the pieces every page is built from.
+ *
+ * Cards, statistics, tables, forms, status indicators, the ECG panel, the
+ * result block, toasts, and the empty and loading states. A page should be
+ * assembled out of these rather than carrying styles of its own; where a
+ * page needs a one-off, it belongs here with a name instead.
+ *
+ * Status is never carried by colour alone. Every dot is paired with a word,
+ * and the words are the same everywhere: RECEIVING, OFFLINE, LEAD OFF,
+ * CONNECTED, so that the interface still reads on a monochrome projector or
+ * to someone who cannot separate red from green.
+ */
+
+/* --- cards -------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  padding: var(--s5);
+  margin-bottom: var(--s5);
+}
+.grid .card { margin-bottom: 0; }
+
+.card-head {
+  display: flex; align-items: center; gap: var(--s3);
+  margin: calc(var(--s5) * -1) calc(var(--s5) * -1) var(--s4);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--border);
+}
+.card-head h2 {
+  font-size: var(--t-card);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  font-weight: 660;
+}
+.card-head .spacer + * { flex: none; }
+.card-body-flush { margin: 0 calc(var(--s5) * -1) calc(var(--s5) * -1); }
+
+.card h3 { font-size: var(--t-section); margin-bottom: var(--s2); }
+
+/* --- statistic tiles ---------------------------------------------------- */
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  padding: var(--s4) var(--s5);
+  display: flex; align-items: flex-start; gap: var(--s4);
+}
+.stat .stat-ico {
+  width: 38px; height: 38px; flex: none;
+  border-radius: var(--r);
+  display: grid; place-items: center;
+  background: var(--primary-soft); color: var(--primary);
+}
+.stat.ok   .stat-ico { background: var(--success-soft); color: var(--success); }
+.stat.flag .stat-ico { background: var(--danger-soft);  color: var(--danger); }
+.stat.idle .stat-ico { background: var(--idle-soft);    color: var(--idle); }
+.stat .k {
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 620;
+}
+.stat .v { font-size: 25px; font-weight: 660; letter-spacing: -.02em; line-height: 1.15; margin-top: 3px; }
+.stat .v.sm { font-size: 15px; font-weight: 620; letter-spacing: 0; margin-top: 6px; }
+.stat .u { font-size: var(--t-caption); color: var(--muted); margin-top: 3px; }
+
+/* --- badges ------------------------------------------------------------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px; font-weight: 660;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.badge.ok    { background: var(--success-soft); color: var(--success); border-color: var(--success-line); }
+.badge.flag  { background: var(--danger-soft);  color: var(--danger);  border-color: var(--danger-line); }
+.badge.warn  { background: var(--warning-soft); color: var(--warning); border-color: var(--warning-line); }
+.badge.idle  { background: var(--idle-soft);    color: var(--idle);    border-color: var(--idle-line); }
+.badge.info  { background: var(--primary-soft); color: var(--primary-strong); border-color: var(--primary-line); }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+/* A live feed pulses; a static badge does not, so motion means "now". */
+.badge.live .dot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* --- status rows (live monitor, device cards) --------------------------- */
+.status-list { display: flex; flex-direction: column; gap: 2px; }
+.status-row {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 9px 0;
+  border-bottom: 1px solid var(--surface-sunken);
+  font-size: var(--t-small);
+}
+.status-row:last-child { border-bottom: 0; }
+.status-row .label { color: var(--muted); font-weight: 560; }
+.status-row .value { margin-left: auto; font-weight: 600; text-align: right; }
+
+/* --- readouts (bpm, rate, progress) ------------------------------------- */
+.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: var(--s3); }
+.readout {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: var(--s3) var(--s4);
+}
+.readout .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+              color: var(--muted); font-weight: 620; }
+.readout .v { font-size: 20px; font-weight: 660; letter-spacing: -.01em; margin-top: 2px; }
+.readout .u { font-size: 11px; color: var(--muted); }
+
+/* --- buttons ------------------------------------------------------------ */
+.btn, button {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: inherit; font-size: var(--t-small); font-weight: 580;
+  padding: 8px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .12s ease, border-color .12s ease;
+}
+.btn:hover, button:hover { background: var(--surface-sunken); border-color: var(--muted); text-decoration: none; }
+.btn.primary, button.primary {
+  background: var(--primary); border-color: var(--primary); color: #fff;
+}
+.btn.primary:hover, button.primary:hover { background: var(--primary-strong); border-color: var(--primary-strong); }
+.btn.ghost, button.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+.btn.ghost:hover, button.ghost:hover { background: var(--surface-sunken); }
+.btn.danger, button.danger { color: var(--danger); border-color: var(--danger-line); }
+.btn.danger:hover, button.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+.btn.sm, button.sm { padding: 5px 10px; font-size: 12.5px; }
+button[disabled], .btn[disabled] { opacity: .45; cursor: not-allowed; }
+button[disabled]:hover { background: var(--surface); border-color: var(--border-strong); }
+
+/* --- forms -------------------------------------------------------------- */
+.field { margin-bottom: var(--s4); }
+.field:last-child { margin-bottom: 0; }
+label { display: block; font-size: var(--t-small); font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
+label.inline { display: inline-flex; align-items: center; gap: 7px; font-weight: 540; margin: 0; }
+
+input[type=text], input[type=password], input[type=number], input[type=date],
+input[type=email], select, textarea {
+  font: inherit; font-size: var(--t-body);
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+input[aria-invalid="true"] { border-color: var(--danger); }
+input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
+select { appearance: none; padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236d7f8f' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; }
+
+.field .err { color: var(--danger); font-size: var(--t-caption); margin-top: 5px; font-weight: 560; }
+.field .hint { color: var(--muted); font-size: var(--t-caption); margin-top: 5px; }
+.form-row { display: flex; gap: var(--s4); flex-wrap: wrap; align-items: flex-end; }
+.form-row > .field { flex: 1 1 180px; margin-bottom: 0; }
+.form-row > .field.none { flex: none; }
+
+/* The eye button inside a password box. */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 42px; }
+.pw-toggle {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  border: 0; background: none; padding: 6px; color: var(--muted); cursor: pointer;
+}
+.pw-toggle:hover { background: none; color: var(--text); }
+
+.pw-meter { display: flex; gap: 4px; margin-top: 7px; }
+.pw-meter i { height: 3px; flex: 1; border-radius: 2px; background: var(--border); }
+.pw-meter.s1 i:nth-child(-n+1) { background: var(--danger); }
+.pw-meter.s2 i:nth-child(-n+2) { background: var(--warning); }
+.pw-meter.s3 i:nth-child(-n+3) { background: #4a9c6d; }
+.pw-meter.s4 i { background: var(--success); }
+
+/* --- notices ------------------------------------------------------------ */
+.notice {
+  display: flex; gap: var(--s3); align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 11px 14px;
+  font-size: var(--t-small);
+  margin-bottom: var(--s4);
+  background: var(--surface);
+}
+.notice .ico { flex: none; margin-top: 1px; }
+.notice.warn { background: var(--warning-soft); border-color: var(--warning-line); color: var(--warning); }
+.notice.ok   { background: var(--success-soft); border-color: var(--success-line); color: var(--success); }
+.notice.err  { background: var(--danger-soft);  border-color: var(--danger-line);  color: var(--danger); }
+.notice.info { background: var(--primary-soft); border-color: var(--primary-line); color: var(--primary-strong); }
+.notice a { color: inherit; text-decoration: underline; }
+
+.disclaimer {
+  color: var(--muted);
+  font-size: var(--t-caption);
+  line-height: 1.5;
+  margin-top: var(--s3);
+}
+
+/* --- toasts ------------------------------------------------------------- */
+.toasts {
+  position: fixed; right: var(--s5); bottom: var(--s5);
+  z-index: 60; display: flex; flex-direction: column; gap: var(--s2);
+  max-width: min(360px, calc(100vw - 32px));
+}
+.toast {
+  display: flex; gap: var(--s3); align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-2);
+  padding: 11px 14px;
+  font-size: var(--t-small);
+  animation: toast-in .2s ease;
+}
+.toast.ok   { border-left-color: var(--success); }
+.toast.warn { border-left-color: var(--warning); }
+.toast.err  { border-left-color: var(--danger); }
+.toast .ico { flex: none; margin-top: 1px; }
+.toast.ok .ico   { color: var(--success); }
+.toast.warn .ico { color: var(--warning); }
+.toast.err .ico  { color: var(--danger); }
+.toast button { border: 0; background: none; padding: 0 2px; color: var(--muted); margin-left: auto; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* --- tables ------------------------------------------------------------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: var(--t-small); }
+thead th {
+  text-align: left; font-weight: 640; color: var(--muted);
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+  padding: 10px var(--s3);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody td { padding: 11px var(--s3); border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--surface-sunken); }
+/* Key-value tables (report details, system status) have a left header column. */
+table.kv th {
+  text-align: left; font-weight: 560; color: var(--muted);
+  padding: 9px var(--s3) 9px 0; border-bottom: 1px solid var(--border);
+  text-transform: none; letter-spacing: 0; font-size: var(--t-small);
+  background: none; white-space: normal; width: 45%;
+}
+table.kv td { padding: 9px 0; text-align: right; font-weight: 560; }
+table.kv tr:hover { background: none; }
+
+/* Below 720px a wide table is re-flowed into one card per row. Each cell
+   grows a label from its data-label attribute, so nothing is lost and the
+   page never scrolls sideways. */
+@media (max-width: 720px) {
+  table.stacked thead { display: none; }
+  table.stacked, table.stacked tbody, table.stacked tr, table.stacked td { display: block; width: 100%; }
+  table.stacked tr {
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: var(--s3);
+    padding: var(--s2) var(--s4);
+    background: var(--surface);
+  }
+  table.stacked tr:hover { background: var(--surface); }
+  table.stacked td {
+    display: flex; align-items: center; gap: var(--s4);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--surface-sunken);
+  }
+  table.stacked td:last-child { border-bottom: 0; }
+  table.stacked td::before {
+    content: attr(data-label);
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); font-weight: 620;
+    flex: none; min-width: 96px;
+  }
+  table.stacked td.act { justify-content: flex-end; }
+  table.stacked td.act::before { content: none; }
+  table.stacked td.act .btn { width: 100%; justify-content: center; }
+}
+
+/* --- empty and loading states ------------------------------------------- */
+.empty {
+  text-align: center;
+  padding: var(--s7) var(--s4);
+  color: var(--muted);
+}
+.empty .ico {
+  width: 46px; height: 46px; margin: 0 auto var(--s3);
+  border-radius: var(--r-pill);
+  display: grid; place-items: center;
+  background: var(--surface-sunken); color: var(--border-strong);
+}
+.empty b { display: block; color: var(--text); font-size: var(--t-body); font-weight: 620; margin-bottom: 5px; }
+.empty p { font-size: var(--t-small); max-width: 46ch; margin: 0 auto; }
+.empty .btn { margin-top: var(--s4); }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-sunken) 25%, #eef2f7 37%, var(--surface-sunken) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.3s linear infinite;
+  border-radius: var(--r-sm);
+  height: 14px;
+}
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+.spinner {
+  width: 15px; height: 15px; flex: none;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- ECG panel ---------------------------------------------------------- */
+/* The trace sits on a dark panel: a thin bright line on dark holds its shape
+   better than the same line on white, which is why monitors are built that
+   way. The stored report uses the same panel so a recording looks the same
+   as it did live. */
+.ecg-panel {
+  background: var(--surface-ink);
+  border: 1px solid #1d3648;
+  border-radius: var(--r);
+  padding: var(--s3);
+  position: relative;
+}
+canvas.ecg { width: 100%; height: 320px; display: block; }
+.ecg-scale {
+  display: flex; gap: var(--s4); flex-wrap: wrap;
+  color: var(--on-dark-muted); font-size: 11px;
+  padding: var(--s2) var(--s1) 0;
+}
+.ecg-flag {
+  position: absolute; top: var(--s4); left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  text-align: center;
+  background: rgba(16, 32, 46, .82);
+  border: 1px solid #2a4a63;
+  border-radius: var(--r);
+  padding: var(--s3) var(--s5);
+  color: var(--on-dark);
+  font-size: var(--t-small);
+}
+.ecg-flag b { font-size: 15px; letter-spacing: .04em; }
+.ecg-flag span { color: var(--on-dark-muted); font-size: var(--t-caption); }
+.ecg-note { color: var(--muted); font-size: var(--t-caption); margin-top: var(--s3); }
+
+@media (max-width: 640px) { canvas.ecg { height: 210px; } }
+
+/* --- screening result --------------------------------------------------- */
+.result {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--idle);
+  border-radius: var(--r);
+  padding: var(--s4) var(--s5);
+  background: var(--surface-sunken);
+}
+.result.normal { border-left-color: var(--success); background: var(--success-soft); }
+.result.mi     { border-left-color: var(--danger);  background: var(--danger-soft); }
+.result .headline { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap; }
+.result .prob { font-size: 32px; font-weight: 680; letter-spacing: -.025em; line-height: 1.1; }
+.result .meta { color: var(--text-2); font-size: var(--t-small); margin-top: var(--s2); }
+.result .meta a { font-weight: 600; }
+
+/* The probability bar. The threshold is drawn as a marked line, because the
+   verdict is the comparison between the two and not the number alone. */
+.meter { margin-top: var(--s4); }
+.meter .track {
+  position: relative; height: 8px; border-radius: var(--r-pill);
+  background: var(--border); overflow: visible;
+}
+.meter .fill { height: 100%; border-radius: var(--r-pill); background: var(--success); transition: width .3s ease; }
+.meter.mi .fill { background: var(--danger); }
+.meter .thr { position: absolute; top: -4px; width: 2px; height: 16px; background: var(--text); border-radius: 1px; }
+.meter .ends { display: flex; justify-content: space-between; margin-top: 7px;
+               font-size: 11px; color: var(--muted); }
+
+/* --- misc --------------------------------------------------------------- */
+.pager { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s4); }
+.pager .page-of { font-size: var(--t-small); color: var(--muted); }
+
+details.tech { margin-top: var(--s4); border-top: 1px solid var(--border); padding-top: var(--s3); }
+details.tech summary {
+  cursor: pointer; font-size: var(--t-small); font-weight: 600; color: var(--text-2);
+  list-style: none; display: flex; align-items: center; gap: 7px;
+}
+details.tech summary::-webkit-details-marker { display: none; }
+details.tech summary::before { content: "+"; color: var(--muted); font-weight: 700; }
+details.tech[open] summary::before { content: "\2212"; }
+details.tech > *:not(summary) { margin-top: var(--s3); }
+
+.device-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: var(--s4);
+  display: flex; gap: var(--s4); align-items: flex-start;
+  margin-bottom: var(--s3);
+}
+.device-card:last-child { margin-bottom: 0; }
+.device-card .stat-ico {
+  width: 40px; height: 40px; flex: none; border-radius: var(--r);
+  display: grid; place-items: center;
+  background: var(--idle-soft); color: var(--idle);
+}
+.device-card.online .stat-ico { background: var(--success-soft); color: var(--success); }
+.device-card .body { flex: 1; min-width: 0; }
+.device-card .id { font-family: var(--mono); font-weight: 620; font-size: var(--t-body); }
+.device-card .facts { display: flex; gap: var(--s4); flex-wrap: wrap; margin-top: var(--s2);
+                      font-size: var(--t-caption); color: var(--muted); }
+.device-card form { margin: 0; }

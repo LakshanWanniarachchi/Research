@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% set active = 'history' %}
+{% block title %}Recording {{ report["id"] }} &middot; ECG Screening System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Recording #{{ report["id"] }}</h1>
+  <span class="sub">
+    {{ report["created_at"] }} &middot;
+    {% if report["prediction"] == 1 %}
+      <span class="pill mi">MI pattern</span>
+    {% else %}
+      <span class="pill normal">Normal</span>
+    {% endif %}
+  </span>
+  <span style="margin-left:auto"><a class="btn" href="{{ url_for('ecg.history') }}">Back to history</a></span>
+</div>
+
+<div class="card">
+  <h2>ECG waveform &mdash; Lead {{ report["lead"] }}, {{ report["sample_rate"] }} Hz</h2>
+  <div class="ecg-wrap"><canvas class="ecg" id="ecg"></canvas></div>
+  <div class="ecg-note">
+    Raw ADC counts as recorded, {{ report["n_samples"] }} samples over
+    {{ "%.0f"|format(report["duration_s"]) }} seconds. The model reads this
+    signal after a per-window z-score and nothing else.
+  </div>
+</div>
+
+<div class="grid two">
+  <div class="card">
+    <h2>Screening result</h2>
+    <div class="result-prob">
+      {{ "%.1f"|format(100 * report["probability"]) }}%
+      {% if report["prediction"] == 1 %}
+        <span class="pill mi">MI PATTERN</span>
+      {% else %}
+        <span class="pill normal">NORMAL</span>
+      {% endif %}
+    </div>
+    <div class="result-meta">
+      MI probability against a threshold of {{ report["threshold"] }}
+      ({{ report["mode"] }} operating point).
+    </div>
+    <table style="margin-top:14px">
+      <tr><th>Model</th><td>{{ report["model_name"] or "—" }}</td></tr>
+      <tr><th>Model version</th><td class="mono">{{ report["model_version"] or "—" }}</td></tr>
+      <tr><th>Inference time</th>
+          <td>{% if report["inference_ms"] %}{{ "%.0f"|format(report["inference_ms"]) }} ms{% else %}—{% endif %}</td></tr>
+    </table>
+    <div class="disclaimer">
+      Experimental research screening result &mdash; not a clinical diagnosis.
+      The high-recall operating point is deliberately easy to trigger and
+      flags a substantial share of healthy recordings.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Recording information</h2>
+    <table>
+      <tr><th>Recording ID</th><td class="mono">{{ report["id"] }}</td></tr>
+      <tr><th>Date</th><td>{{ report["created_at"][:10] }}</td></tr>
+      <tr><th>Time</th><td>{{ report["created_at"][11:19] }}</td></tr>
+      <tr><th>Duration</th><td>{{ "%.0f"|format(report["duration_s"]) }} s</td></tr>
+      <tr><th>Lead</th><td>{{ report["lead"] }}</td></tr>
+      <tr><th>Sampling rate</th><td>{{ report["sample_rate"] }} Hz declared
+        {%- if report["measured_rate"] %}, {{ "%.2f"|format(report["measured_rate"]) }} Hz measured{% endif %}</td></tr>
+      <tr><th>Samples</th><td>{{ report["n_samples"] }}</td></tr>
+      <tr><th>Device</th><td class="mono">{{ report["device_id"] or "—" }}</td></tr>
+      <tr><th>Transport</th><td>{{ report["source"] }}</td></tr>
+      <tr><th>Heart rate</th>
+          <td>{% if report["bpm"] %}{{ "%.0f"|format(report["bpm"]) }} bpm
+              (rhythm regularity {{ "%.2f"|format(report["beat_strength"] or 0) }}){% else %}—{% endif %}</td></tr>
+      {% if quality %}
+      <tr><th>Signal range</th>
+          <td class="mono">{{ quality.get("min", "—") }}–{{ quality.get("max", "—") }} counts</td></tr>
+      <tr><th>Saturated samples</th>
+          <td>{{ "%.1f"|format(100 * (quality.get("rail_fraction") or 0)) }}%</td></tr>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='ecg.js') }}"></script>
+<script>
+const SIGNAL = {{ signal | tojson }};
+const canvas = document.getElementById("ecg");
+function redraw() {
+  ECG.draw(canvas, SIGNAL, {seconds: {{ report["duration_s"] }}});
+}
+window.addEventListener("resize", redraw);
+redraw();
+</script>
+{% endblock %}

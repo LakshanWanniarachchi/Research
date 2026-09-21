@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ECG Screening System{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% if user %}
+  <header class="topbar">
+    <div class="brand"><span class="dot"></span> ECG Screening System</div>
+    <nav class="nav">
+      <a href="{{ url_for('dashboard') }}" {% if active == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
+      <a href="{{ url_for('ecg.live') }}" {% if active == 'live' %}class="active"{% endif %}>Live ECG (Wi-Fi)</a>
+      <a href="{{ url_for('live_page') }}" {% if active == 'usb' %}class="active"{% endif %}>Live ECG (USB)</a>
+      <a href="{{ url_for('ecg.history') }}" {% if active == 'history' %}class="active"{% endif %}>History</a>
+      <a href="{{ url_for('account.devices') }}" {% if active == 'devices' %}class="active"{% endif %}>Devices</a>
+      <a href="{{ url_for('account.profile') }}" {% if active == 'profile' %}class="active"{% endif %}>Profile</a>
+      <a href="{{ url_for('index') }}" {% if active == 'simulation' %}class="active"{% endif %}>Simulation</a>
+    </nav>
+    <span class="who">{{ user["username"] }} &middot; {{ user["role"] }}</span>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <button type="submit">Sign out</button>
+    </form>
+  </header>
+  {% endif %}
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ 'error' if category == 'error' else 'ok' }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block banner %}
+    <div class="banner">
+      <strong>Research prototype.</strong> Not a medical device and not validated
+      for clinical use. Every output is a screening indication that recommends
+      assessment; it is never a diagnosis, and a negative result does not
+      exclude a myocardial infarction.
+    </div>
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

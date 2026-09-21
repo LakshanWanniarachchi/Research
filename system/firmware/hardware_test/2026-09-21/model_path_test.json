@@ -1,0 +1,109 @@
+{
+  "part_a_hardware": {
+    "source": "HARDWARE",
+    "csv": "REC-20260921-180345.csv",
+    "samples": 5992,
+    "windows_passed_to_model": 0,
+    "windows_discarded": {
+      "lead_off": 2920
+    }
+  },
+  "part_b_replay": {
+    "source": "REPLAY of PTB-XL fold 10 (not hardware)",
+    "model": "1D CNN ensemble (5 models, mean of their probabilities)",
+    "windows_scored": 6,
+    "results": [
+      {
+        "recording_id": 8,
+        "truth": "NORMAL",
+        "monitor_path_probability": 0.1082,
+        "server_path_probability": 0.1082,
+        "identical": true,
+        "threshold": 0.2736,
+        "mode": "high_recall",
+        "screening": "NORMAL",
+        "input_shape": [
+          1,
+          1000,
+          1
+        ]
+      },
+      {
+        "recording_id": 27,
+        "truth": "NORMAL",
+        "monitor_path_probability": 0.1213,
+        "server_path_probability": 0.1213,
+        "identical": true,
+        "threshold": 0.2736,
+        "mode": "high_recall",
+        "screening": "NORMAL",
+        "input_shape": [
+          1,
+          1000,
+          1
+        ]
+      },
+      {
+        "recording_id": 29,
+        "truth": "NORMAL",
+        "monitor_path_probability": 0.6584,
+        "server_path_probability": 0.6584,
+        "identical": true,
+        "threshold": 0.2736,
+        "mode": "high_recall",
+        "screening": "MI PATTERN",
+        "input_shape": [
+          1,
+          1000,
+          1
+        ]
+      },
+      {
+        "recording_id": 46,
+        "truth": "MI",
+        "monitor_path_probability": 0.1555,
+        "server_path_probability": 0.1555,
+        "identical": true,
+        "threshold": 0.2736,
+        "mode": "high_recall",
+        "screening": "NORMAL",
+        "input_shape": [
+          1,
+          1000,
+          1
+        ]
+      },
+      {
+        "recording_id": 122,
+        "truth": "MI",
+        "monitor_path_probability": 0.9998,
+        "server_path_probability": 0.9998,
+        "identical": true,
+        "threshold": 0.2736,
+        "mode": "high_recall",
+        "screening": "MI PATTERN",
+        "input_shape": [
+          1,
+          1000,
+          1
+        ]
+      },
+      {
+        "recording_id": 127,
+        "truth": "MI",
+        "monitor_path_probability": 0.1626,
+        "server_path_probability": 0.1626,
+        "identical": true,
+        "threshold": 0.2736,
+        "mode": "high_recall",
+        "screening": "NORMAL",
+        "input_shape": [
+          1,
+          1000,
+          1
+        ]
+      }
+    ],
+    "disclaimer": "Experimental research screening result - not a clinical diagnosis."
+  }
+}

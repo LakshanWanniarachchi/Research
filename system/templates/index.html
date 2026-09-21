@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, stat, screening_note %}
+{% set active = 'simulation' %}
+{% block title %}PTB-XL replay &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}PTB-XL Replay{% endblock %}
+{% block crumb %}<div class="crumb">The same pipeline, driven by a recording the model never saw in training</div>{% endblock %}
+
+{% block content %}
+
+<div class="notice info">
+  {{ icon('i-flask') }}
+  <div><strong>Simulation.</strong> This page replays one of the {{ n_test }} real
+  recordings in <strong>fold 10</strong> &mdash; the held-out test set &mdash; through
+  exactly the code a live signal uses. Results are stored in the database and
+  marked as coming from the simulation, never from a device. For a signal
+  acquired from the AD8232 and ESP32, open the
+  <a href="{{ url_for('ecg.live') }}">live monitor</a>.</div>
+</div>
+
+<div class="grid stats">
+  {{ stat("Test-fold ROC-AUC", roc_auc, "on held-out fold 10", ico="i-pulse") }}
+  {{ stat("Recordings available", n_test, "never seen during training", ico="i-database") }}
+  {{ stat("In the database", n_total, "PTB-XL records extracted", kind="idle", ico="i-file") }}
+  {{ stat("Lead", "I", "single lead, 10 s, 100 Hz", kind="idle", ico="i-heart") }}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Load a recording</h2></div>
+  <div class="row" id="controls">
+    <button class="btn danger" onclick="loadRecord('mi')">Random MI record</button>
+    <button class="btn" onclick="loadRecord('normal')">Random normal record</button>
+    <button class="btn" onclick="loadRecord('any')">Random record</button>
+    <span class="spacer"></span>
+    <label for="modeSelect" style="margin:0">Operating point</label>
+    <select id="modeSelect" style="width:auto" onchange="setMode(this.value)">
+      {% for name, value in thresholds.items() %}
+      <option value="{{ name }}" {% if name == 'high_recall' %}selected{% endif %}>
+        {{ name }} ({{ '%.4f'|format(value) }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="disclaimer">
+    Changing the operating point re-scores the recording on screen without
+    storing anything: moving a threshold is a way of looking at a result, not a
+    new reading.
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Signal &middot; Lead I, {{ sample_rate }} Hz</h2></div>
+  <div class="ecg-panel">
+    <canvas class="ecg" id="ecg" aria-label="Replayed ECG waveform"></canvas>
+    <div class="ecg-scale">
+      <span>1 major division = 1 s</span>
+      <span>{{ sample_rate }} Hz</span>
+      <span>y axis autoscaled, PTB-XL millivolts</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid report">
+  <div class="card">
+    <div class="card-head"><h2>Model verdict</h2></div>
+    <div id="result" class="empty" style="padding:24px 8px">
+      <div class="ico">{{ icon('i-pulse', 22) }}</div>
+      <b>No recording loaded</b>
+      <p>Pick one of the three buttons above to replay a held-out recording.</p>
+    </div>
+    <div id="truth" class="disclaimer"></div>
+    <details class="tech">
+      <summary>Technical details</summary>
+      <table class="kv">
+        <tr><th>Probability of MI</th><td class="mono" id="tProb">—</td></tr>
+        <tr><th>Threshold used</th><td class="mono" id="tThr">—</td></tr>
+        <tr><th>Model time</th><td id="tMs">—</td></tr>
+        <tr><th>Recording id</th><td class="mono" id="tId">—</td></tr>
+      </table>
+    </details>
+    <div class="disclaimer">{{ screening_note() }}</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Recent predictions</h2>
+      <span class="spacer"></span>
+      <span class="caption" id="stats">—</span>
+    </div>
+    <div class="table-wrap">
+      <table class="stacked">
+        <thead>
+          <tr><th>#</th><th>Source</th><th>Probability</th><th>Model said</th>
+              <th>Real diagnosis</th><th>ms</th></tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="6" class="muted">No predictions yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Patient record (simulation only)</h2></div>
+  <div class="form-row">
+    <div class="field">
+      <label for="patientSelect">File this replay under</label>
+      <select id="patientSelect" onchange="onPatientChange()">
+        <option value="">Not assigned to a patient</option>
+      </select>
+    </div>
+    <div class="field none">
+      <a id="patientLink" class="btn" href="#" style="display:none">Open record</a>
+      <button class="btn" type="button"
+              onclick="UI.$('enrolForm').classList.toggle('hidden')">
+        {{ icon('i-plus') }} Enrol a patient</button>
+    </div>
+  </div>
+
+  <div id="enrolForm" class="hidden" style="margin-top:16px; border-top:1px solid var(--border); padding-top:16px">
+    <div class="form-row">
+      <div class="field"><label for="pName">Full name</label>
+        <input id="pName" placeholder="Full name"></div>
+      <div class="field"><label for="pAge">Age</label>
+        <input id="pAge" type="number" min="0" max="120"></div>
+      <div class="field"><label for="pSex">Sex</label>
+        <select id="pSex"><option value="">—</option><option value="M">M</option><option value="F">F</option></select></div>
+      <div class="field"><label for="pDevice">Device id</label>
+        <input id="pDevice" placeholder="ESP32-001"></div>
+      <div class="field none"><button class="btn primary" type="button" onclick="enrolPatient()">Enrol</button></div>
+    </div>
+    <div class="disclaimer">
+      The device id binds one ESP32 to this patient, so anything it posts to
+      <span class="mono">/api/predict</span> is filed under their name.
+      Demographics are entered by hand and are illustrative: PTB-XL patient
+      metadata is not part of this dataset.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ecg.js') }}"></script>
+<script>
+const THRESHOLDS = {{ thresholds | tojson }};
+const SAMPLE_RATE = {{ sample_rate }};
+
+let currentMode = "high_recall";
+let lastSignal = null;
+// Remembered so a re-score can keep showing the right answer for the trace on
+// screen; a re-score never learns the truth by itself.
+let lastTruth = null;
+let lastRecordingId = null;
+
+function drawSignal(signal) {
+  lastSignal = signal;
+  ECG.draw(UI.$("ecg"), signal || [],
+           { seconds: (signal || []).length / SAMPLE_RATE });
+}
+window.addEventListener("resize", function () { drawSignal(lastSignal); });
+
+function showResult(d) {
+  const mi = d.prediction === 1;
+  const pct = (100 * d.probability).toFixed(1);
+  const thrPct = (100 * d.threshold).toFixed(1);
+  UI.$("result").className = "result " + (mi ? "mi" : "normal");
+  UI.$("result").innerHTML =
+    '<div class="headline"><span class="prob">' + pct + '%</span>' +
+    '<span class="badge ' + (mi ? "flag" : "ok") + '"><span class="dot"></span>' +
+    (mi ? "MI PATTERN DETECTED" : "NORMAL PATTERN") + '</span></div>' +
+    '<div class="meter ' + (mi ? "mi" : "") + '"><div class="track">' +
+      '<div class="fill" style="width:' + pct + '%"></div>' +
+      '<div class="thr" style="left:' + thrPct + '%"></div>' +
+    '</div><div class="ends"><span>0%</span><span>threshold ' +
+    d.threshold.toFixed(4) + ' (' + d.mode + ')</span><span>100%</span></div></div>';
+
+  const truth = UI.$("truth");
+  if (d.truth_label !== undefined) {
+    truth.innerHTML = d.correct
+      ? 'Model <strong>agrees</strong> with the clinical label: the real diagnosis is ' +
+        UI.escapeHtml(d.truth_label) + '.'
+      : 'Model <strong>disagrees</strong> with the clinical label: the real diagnosis is ' +
+        UI.escapeHtml(d.truth_label) + '.';
+  } else {
+    truth.textContent = "";
+  }
+
+  UI.$("tProb").textContent = d.probability.toFixed(4);
+  UI.$("tThr").textContent = d.threshold.toFixed(4) + " (" + d.mode + ")";
+  UI.$("tMs").textContent = d.inference_ms + " ms";
+  UI.$("tId").textContent = d.recording_id === undefined || d.recording_id === null
+                            ? "—" : d.recording_id;
+}
+
+// Only the simulation controls are locked while a request is in flight; the
+// navigation and the sign-out button stay usable.
+function setBusy(state) {
+  UI.els("#controls button, #controls select").forEach(b => b.disabled = state);
+}
+
+async function loadRecord(type) {
+  setBusy(true);
+  try {
+    const patientId = UI.$("patientSelect").value;
+    let url = "/api/record?type=" + type + "&mode=" + currentMode;
+    if (patientId) url += "&patient_id=" + patientId;
+
+    const data = await UI.getJSON(url);
+    if (data.error) { UI.toast(data.error, "err"); return; }
+
+    lastTruth = data.truth;
+    lastRecordingId = data.recording_id;
+    drawSignal(data.signal);
+    showResult(data);
+    loadHistory();
+  } catch (e) {
+    UI.toast(e.message || "Could not reach the server.", "err");
+  } finally {
+    setBusy(false);
+  }
+}
+
+// Re-score the SAME recording at a different operating point, so the verdict
+// can be watched changing as the threshold moves.
+//
+// This posts to /api/rescore, NOT /api/predict. /api/predict would store each
+// flip as a new reading from a device with no known truth, so looking at one
+// recording three ways would add three misleading rows to the results.
+async function setMode(mode) {
+  currentMode = mode;
+  if (!lastSignal) return;
+  setBusy(true);
+  try {
+    const data = await UI.postJSON("/api/rescore", { signal: lastSignal, mode: mode });
+    if (data.error) { UI.toast(data.error, "err"); return; }
+    // Re-scoring does not change what the patient actually had.
+    if (lastTruth !== null && lastTruth !== undefined) {
+      data.truth = lastTruth;
+      data.truth_label = lastTruth ? "MI" : "Normal";
+      data.correct = data.prediction === lastTruth;
+      data.recording_id = lastRecordingId;
+    }
+    showResult(data);
+    // No loadHistory(): nothing was stored, so the history cannot have changed.
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function loadPatients() {
+  const data = await UI.getJSON("/api/patients");
+  const sel = UI.$("patientSelect");
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">Not assigned to a patient</option>' +
+    data.patients.map(p =>
+      '<option value="' + p.id + '">' + UI.escapeHtml(p.name) +
+      (p.device_id ? " · " + UI.escapeHtml(p.device_id) : "") +
+      " (" + p.n_predictions + " reading" + (p.n_predictions === 1 ? "" : "s") + ")</option>"
+    ).join("");
+  sel.value = keep;
+  onPatientChange();
+}
+
+function onPatientChange() {
+  const sel = UI.$("patientSelect"), link = UI.$("patientLink");
+  link.style.display = sel.value ? "inline-flex" : "none";
+  link.href = sel.value ? "/patient/" + sel.value : "#";
+}
+
+async function enrolPatient() {
+  const name = UI.$("pName").value.trim();
+  if (!name) { UI.toast("A patient needs a name.", "warn"); return; }
+  const data = await UI.postJSON("/api/patients", {
+    name: name,
+    age: parseInt(UI.$("pAge").value, 10) || null,
+    sex: UI.$("pSex").value || null,
+    device_id: UI.$("pDevice").value.trim() || null
+  });
+  if (data.error) { UI.toast(data.error, "err"); return; }
+  UI.$("pName").value = ""; UI.$("pAge").value = ""; UI.$("pDevice").value = "";
+  await loadPatients();
+  UI.$("patientSelect").value = data.id;
+  onPatientChange();
+  UI.toast("Patient enrolled.", "ok");
+}
+
+async function loadHistory() {
+  const data = await UI.getJSON("/api/history?limit=10");
+  const s = data.stats;
+  UI.$("stats").textContent =
+    s.total + " stored · " + s.avg_inference_ms + " ms average" +
+    (s.accuracy_so_far !== null
+      ? " · correct on " + (s.accuracy_so_far * 100).toFixed(1) + "% of " +
+        s.n_with_known_truth + " with a known answer"
+      : "");
+
+  const body = UI.$("historyBody");
+  if (!data.predictions.length) {
+    body.innerHTML = '<tr><td colspan="6" class="muted">No predictions yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = data.predictions.map(p =>
+    '<tr>' +
+    '<td data-label="#">' + p.id + '</td>' +
+    '<td data-label="Source"><span class="badge idle">' + UI.escapeHtml(p.source) + '</span></td>' +
+    '<td data-label="Probability" class="mono">' + p.probability.toFixed(3) + '</td>' +
+    '<td data-label="Model said"><span class="badge ' + (p.prediction ? "flag" : "ok") +
+      '"><span class="dot"></span>' + (p.prediction ? "MI pattern" : "Normal") + '</span></td>' +
+    '<td data-label="Real diagnosis">' +
+      (p.truth === null ? "—" : (p.truth ? "MI" : "Normal")) + '</td>' +
+    '<td data-label="ms">' + p.inference_ms.toFixed(0) + '</td>' +
+    '</tr>').join("");
+}
+
+drawSignal(null);
+loadPatients();
+loadHistory();
+</script>
+{% endblock %}

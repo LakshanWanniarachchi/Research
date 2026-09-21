@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, stat, result_badge, device_badge, broker_badge, empty, screening_note %}
+{% set active = 'dashboard' %}
+{% set latest = recent[0] if recent else none %}
+{% block title %}Dashboard &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+{% block crumb %}
+<div class="crumb">
+  {{ user["full_name"] or user["username"] }}
+  {%- if age is not none %} &middot; {{ age }} years{% endif %}
+  {%- if user["height_cm"] %} &middot; {{ user["height_cm"] }} cm{% endif %}
+  {%- if user["weight_kg"] %} &middot; {{ user["weight_kg"] }} kg{% endif %}
+</div>
+{% endblock %}
+
+{% block actions %}
+<a class="btn primary" href="{{ url_for('ecg.live') }}">{{ icon('i-pulse') }} Open live monitor</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not user["dob"] and not user["height_cm"] and not user["weight_kg"] %}
+<div class="notice info">
+  {{ icon('i-user') }}
+  <div>Your profile is empty. Add your date of birth, height and weight on the
+  <a href="{{ url_for('account.profile') }}">Profile</a> page so recordings carry them.</div>
+</div>
+{% endif %}
+
+<div class="grid stats">
+  {{ stat("ECG recordings", stats.total, "10 seconds each", ico="i-file") }}
+  {{ stat("Normal pattern", stats.normal, "below the operating threshold", kind="ok", ico="i-check") }}
+  {{ stat("MI-flagged", stats.flagged, "screening flags, not diagnoses", kind="flag", ico="i-warn") }}
+  {{ stat("Linked devices", devices | length,
+          (devices | selectattr("online") | list | length ~ " receiving now") if devices else "none linked yet",
+          kind="" if devices else "idle", ico="i-chip") }}
+</div>
+
+<div class="grid report">
+  {# --- latest recording ------------------------------------------------ #}
+  <div class="card">
+    <div class="card-head">
+      <h2>Latest recording</h2>
+      {% if latest %}<span class="spacer"></span>
+      <a class="btn sm" href="{{ url_for('ecg.report', report_id=latest['id']) }}">Open report</a>{% endif %}
+    </div>
+
+    {% if latest %}
+    <div class="result {{ 'mi' if latest['prediction'] == 1 else 'normal' }}">
+      <div class="headline">
+        <span class="prob">{{ "%.1f"|format(100 * latest["probability"]) }}%</span>
+        {{ result_badge(latest["prediction"], long=true) }}
+      </div>
+      <div class="meter {{ 'mi' if latest['prediction'] == 1 else '' }}">
+        <div class="track">
+          <div class="fill" style="width:{{ "%.1f"|format(100 * latest["probability"]) }}%"></div>
+          <div class="thr" style="left:{{ "%.1f"|format(100 * latest["threshold"]) }}%"
+               title="operating threshold"></div>
+        </div>
+        <div class="ends">
+          <span>0%</span>
+          <span>threshold {{ "%.4f"|format(latest["threshold"]) }} ({{ latest["mode"] }})</span>
+          <span>100%</span>
+        </div>
+      </div>
+      <div class="meta">MI probability against the experimental operating threshold.</div>
+    </div>
+
+    <table class="kv" style="margin-top:16px">
+      <tr><th>Recorded</th><td>{{ latest["created_at"][:10] }} at {{ latest["created_at"][11:19] }}</td></tr>
+      <tr><th>Device</th><td class="mono">{{ latest["device_id"] or "—" }}</td></tr>
+      <tr><th>Lead</th><td>{{ latest["lead"] }}</td></tr>
+      <tr><th>Duration</th><td>{{ "%.0f"|format(latest["duration_s"]) }} s at {{ latest["sample_rate"] }} Hz</td></tr>
+      <tr><th>Heart rate</th>
+        <td>{% if latest["bpm"] %}{{ "%.0f"|format(latest["bpm"]) }} bpm{% else %}—{% endif %}</td></tr>
+    </table>
+    <div class="disclaimer">{{ screening_note() }}</div>
+
+    {% else %}
+    {% call empty("No ECG recordings yet",
+                  "Link your ESP32 on the Devices page, connect the electrodes, and open the live
+                   monitor. Every clean ten-second window is scored and stored here automatically.",
+                  ico="i-pulse") %}
+      <a class="btn primary" href="{{ url_for('account.devices') }}">{{ icon('i-chip') }} Link a device</a>
+    {% endcall %}
+    {% endif %}
+  </div>
+
+  {# --- system and device status ---------------------------------------- #}
+  <div class="card">
+    <div class="card-head"><h2>System status</h2></div>
+
+    <div class="status-list">
+      <div class="status-row">
+        <span class="label">MQTT broker</span>
+        <span class="value">{{ broker_badge(mqtt_enabled, mqtt_connected) }}</span>
+      </div>
+      <div class="status-row">
+        <span class="label">Broker address</span>
+        <span class="value mono">{{ mqtt_host }}:{{ mqtt_port }}</span>
+      </div>
+      <div class="status-row">
+        <span class="label">Chunks received</span>
+        <span class="value">{{ mqtt_messages }}{% if mqtt_rejected %} &middot; {{ mqtt_rejected }} rejected{% endif %}</span>
+      </div>
+      <div class="status-row">
+        <span class="label">Model</span>
+        <span class="value"><span class="badge info"><span class="dot"></span>READY</span></span>
+      </div>
+      <div class="status-row">
+        <span class="label">Database</span>
+        <span class="value"><span class="badge ok"><span class="dot"></span>CONNECTED</span></span>
+      </div>
+    </div>
+
+    <details class="tech">
+      <summary>Technical details</summary>
+      <table class="kv">
+        <tr><th>Model</th><td>{{ model_name }}</td></tr>
+        <tr><th>Model version</th><td class="mono">{{ model_version }}</td></tr>
+        <tr><th>Test-fold ROC-AUC</th><td>{{ roc_auc }}</td></tr>
+        <tr><th>Band-pass filter</th>
+            <td>{{ "on" if bandpass else "off — this model was trained without it" }}</td></tr>
+        <tr><th>Operating thresholds</th>
+            <td class="mono">{% for name, value in thresholds.items() %}{{ name }} {{ "%.4f"|format(value) }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td></tr>
+        <tr><th>Device token required</th><td>{{ "yes" if require_token else "no" }}</td></tr>
+        <tr><th>Held-out recordings for replay</th><td>{{ n_test }}</td></tr>
+      </table>
+    </details>
+  </div>
+</div>
+
+{# --- devices ----------------------------------------------------------- #}
+<div class="card">
+  <div class="card-head">
+    <h2>My devices</h2>
+    <span class="spacer"></span>
+    <a class="btn sm" href="{{ url_for('account.devices') }}">Manage</a>
+  </div>
+
+  {% if devices %}
+  {% for d in devices %}
+  <div class="device-card {{ 'online' if d['online'] }}">
+    <span class="stat-ico">{{ icon('i-chip', 20) }}</span>
+    <div class="body">
+      <div class="row">
+        <span class="id">{{ d["device_id"] }}</span>
+        {{ device_badge(d["online"]) }}
+      </div>
+      <div class="facts">
+        <span>{{ d["label"] or "no label" }}</span>
+        <span>{% if d["rate_hz"] %}{{ "%.2f"|format(d["rate_hz"]) }} Hz measured{% else %}rate unknown{% endif %}</span>
+        <span>{{ d["reports"] }} recording{{ "" if d["reports"] == 1 else "s" }}</span>
+        <span>last seen {{ d["last_seen"] or "never" }}</span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  {% call empty("No ECG device linked",
+                "Add the device id your ESP32 prints on its serial console at start-up,
+                 for example ESP32-001.", ico="i-chip") %}
+    <a class="btn primary" href="{{ url_for('account.devices') }}">{{ icon('i-plus') }} Link a device</a>
+  {% endcall %}
+  {% endif %}
+</div>
+
+{# --- recent reports ---------------------------------------------------- #}
+<div class="card">
+  <div class="card-head">
+    <h2>Recent reports</h2>
+    <span class="spacer"></span>
+    {% if recent %}<a class="btn sm" href="{{ url_for('ecg.history') }}">See all {{ stats.total }}</a>{% endif %}
+  </div>
+
+  {% if recent %}
+  <div class="table-wrap">
+    <table class="stacked">
+      <thead>
+        <tr><th>Date</th><th>Time</th><th>Result</th><th>MI probability</th>
+            <th>Heart rate</th><th>Device</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for r in recent %}
+        <tr>
+          <td data-label="Date">{{ r["created_at"][:10] }}</td>
+          <td data-label="Time">{{ r["created_at"][11:16] }}</td>
+          <td data-label="Result">{{ result_badge(r["prediction"]) }}</td>
+          <td data-label="Probability" class="mono">{{ "%.1f"|format(100 * r["probability"]) }}%</td>
+          <td data-label="Heart rate">{% if r["bpm"] %}{{ "%.0f"|format(r["bpm"]) }} bpm{% else %}—{% endif %}</td>
+          <td data-label="Device" class="mono">{{ r["device_id"] or "—" }}</td>
+          <td class="act"><a class="btn sm" href="{{ url_for('ecg.report', report_id=r['id']) }}">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty" style="padding:24px">No reports yet.</p>
+  {% endif %}
+</div>
+
+<div class="disclaimer">
+  {{ screening_note() }} The model was trained on PTB-XL clinical recordings;
+  signals acquired through the AD8232 carry that difference on top of the
+  model&rsquo;s own error.
+</div>
+{% endblock %}

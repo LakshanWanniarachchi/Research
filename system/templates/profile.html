@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% set active = 'profile' %}
+{% block title %}Profile &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}Profile{% endblock %}
+{% block crumb %}<div class="crumb">Stored with your account only, and shown on your dashboard</div>{% endblock %}
+
+{% block content %}
+<div class="grid halves">
+
+  <div class="card">
+    <div class="card-head"><h2>Personal information</h2></div>
+    <form method="post" novalidate>
+      <div class="field">
+        <label for="full_name">Full name</label>
+        <input type="text" id="full_name" name="full_name" maxlength="80"
+               value="{{ values.full_name or '' }}"
+               {% if errors.full_name %}aria-invalid="true" aria-describedby="e-name"{% endif %}>
+        {% if errors.full_name %}<div class="err" id="e-name">{{ errors.full_name }}</div>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="dob">Date of birth</label>
+        <input type="date" id="dob" name="dob" value="{{ values.dob or '' }}"
+               {% if errors.dob %}aria-invalid="true" aria-describedby="e-dob"{% endif %}>
+        {% if errors.dob %}<div class="err" id="e-dob">{{ errors.dob }}</div>
+        {% else %}<div class="hint">A real date in the past.</div>{% endif %}
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="height_cm">Height (cm)</label>
+          <input type="number" id="height_cm" name="height_cm" step="0.1"
+                 min="50" max="250" value="{{ values.height_cm or '' }}"
+                 {% if errors.height_cm %}aria-invalid="true" aria-describedby="e-h"{% endif %}>
+          {% if errors.height_cm %}<div class="err" id="e-h">{{ errors.height_cm }}</div>{% endif %}
+        </div>
+        <div class="field">
+          <label for="weight_kg">Weight (kg)</label>
+          <input type="number" id="weight_kg" name="weight_kg" step="0.1"
+                 min="20" max="400" value="{{ values.weight_kg or '' }}"
+                 {% if errors.weight_kg %}aria-invalid="true" aria-describedby="e-w"{% endif %}>
+          {% if errors.weight_kg %}<div class="err" id="e-w">{{ errors.weight_kg }}</div>{% endif %}
+        </div>
+      </div>
+
+      <button class="btn primary" type="submit" style="margin-top:8px">Save profile</button>
+
+      <div class="disclaimer">
+        These details are recorded for the research record. They are not used by
+        the model: it reads the ECG waveform and nothing else.
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Account</h2></div>
+    <table class="kv">
+      <tr><th>Username</th><td class="mono">{{ user["username"] }}</td></tr>
+      <tr><th>Role</th><td>{{ user["role"] }}</td></tr>
+      <tr><th>Name</th><td>{{ user["full_name"] or "—" }}</td></tr>
+      <tr><th>Date of birth</th><td>{{ user["dob"] or "—" }}</td></tr>
+      <tr><th>Age</th><td>{{ age if age is not none else "—" }}</td></tr>
+      <tr><th>Height</th><td>{% if user["height_cm"] %}{{ user["height_cm"] }} cm{% else %}—{% endif %}</td></tr>
+      <tr><th>Weight</th><td>{% if user["weight_kg"] %}{{ user["weight_kg"] }} kg{% else %}—{% endif %}</td></tr>
+      <tr><th>Member since</th><td>{{ user["created_at"] }}</td></tr>
+      {% if user["updated_at"] %}
+      <tr><th>Profile updated</th><td>{{ user["updated_at"] }}</td></tr>
+      {% endif %}
+    </table>
+
+    <div class="notice info" style="margin:16px 0 0">
+      {{ icon('i-shield') }}
+      <div>Your recordings, devices and reports are visible only to this
+      account. A report belonging to another account is answered
+      &ldquo;not found&rdquo;, not &ldquo;forbidden&rdquo;.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

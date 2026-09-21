@@ -1,0 +1,35 @@
+# Access control list for the ECG prototype broker
+# ================================================
+#
+# Referenced by mosquitto.windows.conf (acl_file acl). Without it, every
+# authenticated client could publish to every topic, and the device id inside a
+# topic would mean nothing: any device could file readings as any other.
+#
+# Topic design (no patient data anywhere in a topic - only a device id):
+#   ecg/devices/<device_id>/data     device -> server   1-second ECG chunk
+#   ecg/devices/<device_id>/status   device -> server   online/offline, retained
+#   ecg/devices/<device_id>/event    device -> server   reconnects, overruns
+#   ecg/devices/<device_id>/result   server -> device   screening verdict
+#   ecg/<device_id>/reading          legacy whole-window contract (simulator)
+#   ecg/<device_id>/result           legacy verdict topic
+
+# The backend subscribes across all devices and answers each one.
+user ecg-server
+topic read  ecg/devices/+/data
+topic read  ecg/devices/+/status
+topic read  ecg/devices/+/event
+topic write ecg/devices/+/result
+topic read  ecg/+/reading
+topic write ecg/+/result
+
+# One device: it may publish only its own branch and read only its own verdict.
+# Topics are case-sensitive: the device id is ESP32-001, matching the firmware
+# DEVICE_ID and the devices table. The broker account name stays lowercase.
+# A second device gets its own block; it cannot touch this one's topics.
+user esp32-001
+topic write ecg/devices/ESP32-001/data
+topic write ecg/devices/ESP32-001/status
+topic write ecg/devices/ESP32-001/event
+topic read  ecg/devices/ESP32-001/result
+topic write ecg/ESP32-001/reading
+topic read  ecg/ESP32-001/result

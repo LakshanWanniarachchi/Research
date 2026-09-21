@@ -1,0 +1,63 @@
+{#
+  Shared markup. Anything that appears on more than one page and carries
+  meaning - a result, a device state, an empty list - is defined once here, so
+  a "normal" looks the same on the dashboard as it does inside a report, and
+  so the wording of a screening result cannot drift from page to page.
+#}
+
+{% macro icon(name, size=16, cls="") -%}
+<svg class="ico {{ cls }}" width="{{ size }}" height="{{ size }}" aria-hidden="true"
+     focusable="false"><use href="{{ url_for('static', filename='icons.svg') }}#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# The screening verdict. Never "diagnosis", never "confirmed". #}
+{% macro result_badge(prediction, long=false) -%}
+{% if prediction == 1 %}
+<span class="badge flag"><span class="dot"></span>{{ "MI PATTERN DETECTED" if long else "MI pattern" }}</span>
+{% else %}
+<span class="badge ok"><span class="dot"></span>{{ "NORMAL PATTERN" if long else "Normal" }}</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro device_badge(online) -%}
+{% if online %}
+<span class="badge ok live"><span class="dot"></span>RECEIVING</span>
+{% else %}
+<span class="badge idle"><span class="dot"></span>OFFLINE</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro broker_badge(enabled, connected) -%}
+{% if connected %}
+<span class="badge ok live"><span class="dot"></span>CONNECTED</span>
+{% elif enabled %}
+<span class="badge flag"><span class="dot"></span>DISCONNECTED</span>
+{% else %}
+<span class="badge idle"><span class="dot"></span>DISABLED</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro stat(label, value, unit="", kind="", ico="i-pulse", small=false) -%}
+<div class="stat {{ kind }}">
+  <div class="stat-ico">{{ icon(ico, 19) }}</div>
+  <div>
+    <div class="k">{{ label }}</div>
+    <div class="v {{ 'sm' if small }}">{{ value }}</div>
+    {% if unit %}<div class="u">{{ unit }}</div>{% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro empty(title, body, ico="i-inbox") -%}
+<div class="empty">
+  <div class="ico">{{ icon(ico, 22) }}</div>
+  <b>{{ title }}</b>
+  <p>{{ body }}</p>
+  {{ caller() if caller is defined and caller }}
+</div>
+{%- endmacro %}
+
+{# The sentence that must appear wherever a probability does. #}
+{% macro screening_note() -%}
+Experimental research screening result &mdash; not a clinical diagnosis.
+{%- endmacro %}

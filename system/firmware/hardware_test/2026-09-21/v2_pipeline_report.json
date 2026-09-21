@@ -1,0 +1,117 @@
+{
+  "port": "COM7",
+  "baud": 115200,
+  "elapsed_s": 30.8,
+  "samples": 3052,
+  "status_lines": 0,
+  "boot_or_other_text_lines": 0,
+  "malformed_lines": 0,
+  "sequence_gaps": 0,
+  "device_dt_us": {
+    "mean": 10000.0,
+    "sd": 0.497,
+    "min": 9999,
+    "max": 10001
+  },
+  "device_rate_hz": 100.0,
+  "pc_arrival_rate_hz": 100.002,
+  "pc_arrival_span_s": 30.509,
+  "lead_off_fraction": 0.0,
+  "lo_plus_high_fraction": 0.0,
+  "lo_minus_high_fraction": 0.0,
+  "adc": {
+    "min": 2222,
+    "max": 3013,
+    "mean": 2599.3,
+    "std": 224.5,
+    "rail_fraction": 0.0
+  },
+  "windows_completed": 3,
+  "windows_discarded": {},
+  "diagnosis": "Signal available",
+  "last_status_lines": [],
+  "error": "",
+  "csv": "C:\\Users\\laksh\\OneDrive\\Desktop\\reserch new\\Reserch-20260921T053852Z-1-001\\Reserch\\system\\recordings\\REC-20260923-171128.csv",
+  "model": "1D CNN ensemble (5 models, mean of their probabilities)",
+  "predictions": [
+    {
+      "first_seq": 5504,
+      "measured_rate_hz": 100.0,
+      "input_shape": [
+        1,
+        1000,
+        1
+      ],
+      "probability": 0.5229,
+      "threshold": 0.2736,
+      "mode": "high_recall",
+      "prediction": 1,
+      "label": "MI PATTERN",
+      "inference_ms": 2961.7,
+      "warmup": true,
+      "quality": {
+        "n": 1000,
+        "min": 2275,
+        "max": 2977,
+        "mean": 2612.5,
+        "std": 211.4,
+        "rail_fraction": 0.0,
+        "saturated": false,
+        "flat": false
+      }
+    },
+    {
+      "first_seq": 6504,
+      "measured_rate_hz": 100.0,
+      "input_shape": [
+        1,
+        1000,
+        1
+      ],
+      "probability": 0.5974,
+      "threshold": 0.2736,
+      "mode": "high_recall",
+      "prediction": 1,
+      "label": "MI PATTERN",
+      "inference_ms": 329.1,
+      "warmup": false,
+      "quality": {
+        "n": 1000,
+        "min": 2222,
+        "max": 3013,
+        "mean": 2599.9,
+        "std": 214.3,
+        "rail_fraction": 0.0,
+        "saturated": false,
+        "flat": false
+      }
+    },
+    {
+      "first_seq": 7504,
+      "measured_rate_hz": 100.0,
+      "input_shape": [
+        1,
+        1000,
+        1
+      ],
+      "probability": 0.4801,
+      "threshold": 0.2736,
+      "mode": "high_recall",
+      "prediction": 1,
+      "label": "MI PATTERN",
+      "inference_ms": 333.0,
+      "warmup": false,
+      "quality": {
+        "n": 1000,
+        "min": 2224,
+        "max": 2992,
+        "mean": 2587.1,
+        "std": 250.2,
+        "rail_fraction": 0.0,
+        "saturated": false,
+        "flat": false
+      }
+    }
+  ],
+  "disclaimer": "Experimental research screening result - not a clinical diagnosis."
+}

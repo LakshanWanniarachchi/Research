@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in &middot; ECG Screening System</title>
+  <style>
+    :root { --ink:#1a1a1a; --muted:#5b6b7c; --line:#d9e2ec; --bg:#f4f6f9;
+            --accent:#1f5fa8; --bad:#b04a4a; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center;
+           justify-content:center; background:var(--bg); color:var(--ink);
+           font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:10px;
+            padding:32px; width:100%; max-width:380px;
+            box-shadow:0 1px 3px rgba(0,0,0,.06); }
+    h1 { margin:0 0 4px; font-size:19px; }
+    .sub { margin:0 0 24px; color:var(--muted); font-size:13px; }
+    label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; }
+    input { width:100%; padding:9px 11px; border:1px solid var(--line);
+            border-radius:6px; font-size:14px; margin-bottom:16px;
+            font-family:inherit; }
+    input:focus { outline:2px solid var(--accent); outline-offset:-1px;
+                  border-color:var(--accent); }
+    button { width:100%; padding:10px; border:0; border-radius:6px;
+             background:var(--accent); color:#fff; font-size:14px;
+             font-weight:600; cursor:pointer; font-family:inherit; }
+    button:hover { background:#17457b; }
+    .flash { padding:9px 11px; border-radius:6px; font-size:13px;
+             margin-bottom:16px; }
+    .flash.error { background:#fdecec; color:var(--bad);
+                   border:1px solid #f3c9c9; }
+    .flash.ok { background:#eef7ee; color:#2a7f4f; border:1px solid #cfe6d4; }
+    .note { margin-top:20px; padding-top:16px; border-top:1px solid var(--line);
+            color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ECG Screening System</h1>
+    <p class="sub">Research prototype &mdash; not a medical device</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('auth.login') }}">
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username"
+             autofocus required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password"
+             autocomplete="current-password" required>
+
+      <button type="submit">Sign in</button>
+    </form>
+
+    <p class="note">
+      No account yet? <a href="{{ url_for('account.register') }}">Create one</a>.
+      Your ECG recordings are visible only to your own account.
+      <br><br>
+      On a fresh installation an <strong>admin</strong> account is created at
+      first start-up and its password is printed once to the server console.
+    </p>
+  </div>
+</body>
+</html>

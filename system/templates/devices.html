@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, device_badge, empty %}
+{% set active = 'devices' %}
+{% block title %}My devices &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}My Devices{% endblock %}
+{% block crumb %}<div class="crumb">An ECG published by one of these devices becomes your recording</div>{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Linked devices</h2>
+    <span class="spacer"></span>
+    <span class="caption">{{ devices | length }} linked</span>
+  </div>
+
+  {% if devices %}
+  {% for d in devices %}
+  {% set state = live.get(d["device_id"], {}) %}
+  <div class="device-card {{ 'online' if state.online }}">
+    <span class="stat-ico">{{ icon('i-chip', 20) }}</span>
+    <div class="body">
+      <div class="row">
+        <span class="id">{{ d["device_id"] }}</span>
+        {{ device_badge(state.online) }}
+        {% if d["label"] %}<span class="caption">{{ d["label"] }}</span>{% endif %}
+      </div>
+      <div class="facts">
+        <span>{% if state.rate_hz %}{{ "%.2f"|format(state.rate_hz) }} Hz measured{% else %}rate unknown{% endif %}</span>
+        <span>{{ state.samples or 0 }} samples this session</span>
+        <span>{{ d["reports"] }} recording{{ "" if d["reports"] == 1 else "s" }}</span>
+        <span>last seen {{ d["last_seen"] or d["last_report"] or "never" }}</span>
+      </div>
+    </div>
+    <form method="post"
+          onsubmit="return confirm('Unlink {{ d["device_id"] }} from your account? Recordings already stored are kept.');">
+      <input type="hidden" name="action" value="release">
+      <input type="hidden" name="device_id" value="{{ d["device_id"] }}">
+      <button class="btn danger sm" type="submit">Unlink</button>
+    </form>
+  </div>
+  {% endfor %}
+
+  {% else %}
+  {{ empty("No ECG device linked",
+           "Add the device id your ESP32 prints on its serial console at start-up,
+            for example ESP32-001. Until a device is linked, nothing it publishes
+            becomes a recording of yours.", ico="i-chip") }}
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Link a device</h2></div>
+  <form method="post">
+    <input type="hidden" name="action" value="claim">
+    <div class="form-row">
+      <div class="field">
+        <label for="device_id">Device ID</label>
+        <input type="text" id="device_id" name="device_id" placeholder="ESP32-001" required>
+      </div>
+      <div class="field">
+        <label for="label">Label (optional)</label>
+        <input type="text" id="label" name="label" placeholder="Bench unit">
+      </div>
+      <div class="field none">
+        <button class="btn primary" type="submit">{{ icon('i-plus') }} Link device</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="notice info" style="margin:16px 0 0">
+    {{ icon('i-shield') }}
+    <div>A device id belongs to one account at a time. The device never learns
+    who owns it: it publishes under its own id, and the broker allows it to
+    publish only on its own topics.</div>
+  </div>
+</div>
+{% endblock %}

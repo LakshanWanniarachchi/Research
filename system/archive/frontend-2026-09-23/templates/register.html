@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Create account &middot; ECG Screening System{% endblock %}
+{% block banner %}{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="card">
+    <h1>Create an account</h1>
+    <div class="sub">
+      Your ECG recordings are visible only to your own account.
+    </div>
+
+    <form method="post" novalidate>
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username"
+               value="{{ values.username or '' }}" autofocus required>
+        {% if errors.username %}<div class="err">{{ errors.username }}</div>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password"
+               autocomplete="new-password" required>
+        {% if errors.password %}<div class="err">{{ errors.password }}</div>
+        {% else %}<div class="hint">At least 8 characters.</div>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="confirm">Repeat password</label>
+        <input type="password" id="confirm" name="confirm"
+               autocomplete="new-password" required>
+        {% if errors.confirm %}<div class="err">{{ errors.confirm }}</div>{% endif %}
+      </div>
+
+      <button class="primary" type="submit">Create account</button>
+    </form>
+
+    <div class="disclaimer" style="margin-top:16px">
+      Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a>.
+      <br>
+      This is a research prototype. Do not use it to make decisions about
+      anyone's health.
+    </div>
+  </div>
+</div>
+{% endblock %}

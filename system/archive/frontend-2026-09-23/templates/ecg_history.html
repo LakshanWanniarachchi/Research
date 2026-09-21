@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% set active = 'history' %}
+{% block title %}ECG history &middot; ECG Screening System{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>ECG history</h1>
+  <span class="sub">Your recordings only.</span>
+</div>
+
+<div class="grid kpi">
+  <div class="tile"><div class="k">Total recordings</div><div class="v">{{ stats.total }}</div></div>
+  <div class="tile"><div class="k">Normal</div><div class="v">{{ stats.normal }}</div></div>
+  <div class="tile"><div class="k">MI-flagged</div><div class="v">{{ stats.flagged }}</div>
+    <div class="u">screening flags, not diagnoses</div></div>
+  <div class="tile"><div class="k">Latest</div>
+    <div class="v" style="font-size:16px">{{ stats.last_at or "—" }}</div></div>
+</div>
+
+<div class="card">
+  <h2>Filter</h2>
+  <form method="get">
+    <div class="form-row">
+      <div class="field" style="min-width:160px; margin-bottom:0">
+        <label for="result">Result</label>
+        <select id="result" name="result">
+          <option value="" {% if not filters.result %}selected{% endif %}>All</option>
+          <option value="normal" {% if filters.result == 'normal' %}selected{% endif %}>Normal</option>
+          <option value="mi" {% if filters.result == 'mi' %}selected{% endif %}>MI-flagged</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:150px; margin-bottom:0">
+        <label for="from">From</label>
+        <input type="date" id="from" name="from" value="{{ filters['from'] or '' }}">
+      </div>
+      <div class="field" style="min-width:150px; margin-bottom:0">
+        <label for="to">To</label>
+        <input type="date" id="to" name="to" value="{{ filters['to'] or '' }}">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <button class="primary" type="submit">Apply</button>
+        <a class="btn" href="{{ url_for('ecg.history') }}">Clear</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>{{ total }} recording{{ '' if total == 1 else 's' }}</h2>
+  {% if reports %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Time</th><th>Duration</th><th>Result</th>
+          <th>Probability</th><th>Heart rate</th><th>Device</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td>{{ r["created_at"][:10] }}</td>
+          <td>{{ r["created_at"][11:16] }}</td>
+          <td>{{ "%.0f"|format(r["duration_s"]) }} s</td>
+          <td>
+            {% if r["prediction"] == 1 %}<span class="pill mi">MI pattern</span>
+            {% else %}<span class="pill normal">Normal</span>{% endif %}
+          </td>
+          <td class="mono">{{ "%.3f"|format(r["probability"]) }}</td>
+          <td>{% if r["bpm"] %}{{ "%.0f"|format(r["bpm"]) }} bpm{% else %}—{% endif %}</td>
+          <td class="mono">{{ r["device_id"] or "—" }}</td>
+          <td><a class="btn" href="{{ url_for('ecg.report', report_id=r['id']) }}">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <div style="margin-top:14px; display:flex; gap:8px; align-items:center">
+    {% if page > 1 %}
+      <a class="btn" href="{{ url_for('ecg.history', page=page-1, result=filters.result, **{'from': filters['from'], 'to': filters['to']}) }}">Previous</a>
+    {% endif %}
+    <span class="sub">Page {{ page }} of {{ pages }}</span>
+    {% if page < pages %}
+      <a class="btn" href="{{ url_for('ecg.history', page=page+1, result=filters.result, **{'from': filters['from'], 'to': filters['to']}) }}">Next</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <p class="empty">
+    No ECG recordings yet. Link your device, connect the electrodes, and open
+    the <a href="{{ url_for('ecg.live') }}">Live ECG</a> page; each clean
+    ten-second window is stored here automatically.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

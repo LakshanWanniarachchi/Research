@@ -1,0 +1,39 @@
+{
+  "port": "COM7",
+  "baud": 115200,
+  "elapsed_s": 60.47,
+  "samples": 5992,
+  "status_lines": 2,
+  "boot_or_other_text_lines": 10,
+  "malformed_lines": 0,
+  "sequence_gaps": 0,
+  "device_dt_us": {
+    "mean": 9999.999,
+    "sd": 0.746,
+    "min": 9992,
+    "max": 10001
+  },
+  "device_rate_hz": 100.0,
+  "pc_arrival_rate_hz": 99.999,
+  "pc_arrival_span_s": 59.91,
+  "lead_off_fraction": 0.4873,
+  "lo_plus_high_fraction": 0.4873,
+  "lo_minus_high_fraction": 0.0287,
+  "adc": {
+    "min": 0,
+    "max": 4095,
+    "mean": 1920.1,
+    "std": 1917.6,
+    "rail_fraction": 0.8042
+  },
+  "windows_completed": 0,
+  "windows_discarded": {
+    "lead_off": 2920
+  },
+  "last_status_lines": [
+    "ECG_SERIAL v1 fs_hz=100 adc_bits=12 atten=11db ecg_pin=36 lo_plus_pin=12 lo_minus_pin=13",
+    "columns: seq,t_us,ecg_adc,lo_plus,lo_minus"
+  ],
+  "error": "",
+  "csv": "C:\\Users\\laksh\\OneDrive\\Desktop\\reserch new\\Reserch-20260921T053852Z-1-001\\Reserch\\system\\recordings\\REC-20260921-180345.csv"
+}

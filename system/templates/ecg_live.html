@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty, screening_note %}
+{% set active = 'live' %}
+{% block title %}Live ECG &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}Live ECG{% endblock %}
+{% block crumb %}<div class="crumb">Streamed from the device over Wi-Fi and MQTT</div>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ url_for('live_page') }}">{{ icon('i-usb') }} USB instead</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not devices %}
+<div class="card">
+  {% call empty("No ECG device linked",
+                "Link your ESP32 on the Devices page first. Until a device is linked to your
+                 account there is nothing for this page to show.", ico="i-chip") %}
+    <a class="btn primary" href="{{ url_for('account.devices') }}">{{ icon('i-plus') }} Link a device</a>
+  {% endcall %}
+</div>
+
+{% else %}
+
+<div class="card">
+  <div class="form-row">
+    <div class="field">
+      <label for="device">Device</label>
+      <select id="device">
+        {% for d in devices %}
+        <option value="{{ d['device_id'] }}" {% if d['device_id'] == selected %}selected{% endif %}>
+          {{ d["device_id"] }}{% if d["label"] %} — {{ d["label"] }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="mode">Experimental operating point</label>
+      <select id="mode">
+        <option value="default">default</option>
+        <option value="best_f1">best_f1</option>
+        <option value="high_recall" selected>high_recall</option>
+      </select>
+    </div>
+  </div>
+  <div class="disclaimer">
+    The operating point moves the threshold only; the model and the probability
+    are the same either way. <span class="mono">high_recall</span> is tuned to
+    miss as few infarctions as possible and flags about a third of healthy
+    recordings; <span class="mono">default</span> (0.5) is the balanced point.
+    It applies to the next window scored, never to one already stored.
+  </div>
+</div>
+
+<div class="grid monitor">
+  {# --- waveform -------------------------------------------------------- #}
+  <div class="card">
+    <div class="card-head">
+      <h2>Lead I &middot; last 10 seconds</h2>
+      <span class="spacer"></span>
+      <span class="badge idle" id="stDevice"><span class="dot"></span>WAITING</span>
+    </div>
+
+    <div class="ecg-panel">
+      <canvas class="ecg" id="ecg" aria-label="Live ECG waveform"></canvas>
+      <div class="ecg-flag hidden" id="ecgFlag" role="status"></div>
+      <div class="ecg-scale">
+        <span>1 major division = 1 s</span>
+        <span>100 Hz</span>
+        <span>y axis autoscaled raw ADC counts, not calibrated mV</span>
+      </div>
+    </div>
+    <div class="ecg-note" id="diagnosis">Waiting for data from the device&hellip;</div>
+
+    <div class="readouts" style="margin-top:16px">
+      <div class="readout"><div class="k">Heart rate</div>
+        <div class="v"><span id="bpm">—</span> <span class="u">bpm</span></div></div>
+      <div class="readout"><div class="k">Sampling rate</div>
+        <div class="v"><span id="rate">—</span> <span class="u">Hz</span></div></div>
+      <div class="readout"><div class="k">Samples received</div>
+        <div class="v" id="samples">0</div></div>
+      <div class="readout"><div class="k">Next window</div>
+        <div class="v" id="window">0 / 1000</div></div>
+    </div>
+
+    <div class="meter" style="margin-top:14px">
+      <div class="track"><div class="fill" id="windowBar" style="width:0%"></div></div>
+      <div class="ends">
+        <span id="windowsDone">scored 0</span>
+        <span id="counters"></span>
+      </div>
+    </div>
+  </div>
+
+  {# --- status rail ----------------------------------------------------- #}
+  <div>
+    <div class="card">
+      <div class="card-head"><h2>Session status</h2></div>
+      <div class="status-list">
+        <div class="status-row"><span class="label">MQTT broker</span>
+          <span class="value"><span class="badge idle" id="stLink"><span class="dot"></span>CHECKING</span></span></div>
+        <div class="status-row"><span class="label">Electrodes</span>
+          <span class="value"><span class="badge idle" id="stLead"><span class="dot"></span>UNKNOWN</span></span></div>
+        <div class="status-row"><span class="label">&nbsp;&nbsp;LO+ &middot; +IN electrode</span>
+          <span class="value"><span class="badge idle" id="stLoPlus"><span class="dot"></span>NO DATA</span></span></div>
+        <div class="status-row"><span class="label">&nbsp;&nbsp;LO&minus; &middot; &minus;IN electrode</span>
+          <span class="value"><span class="badge idle" id="stLoMinus"><span class="dot"></span>NO DATA</span></span></div>
+        <div class="notice info" style="margin:8px 0 4px" role="status">
+          <div id="electrodeNote">Waiting for data from the device.</div>
+        </div>
+        <div class="status-row"><span class="label">ECG signal</span>
+          <span class="value"><span class="badge idle" id="stSignal"><span class="dot"></span>WAITING</span></span></div>
+        <div class="status-row"><span class="label">Model</span>
+          <span class="value"><span class="badge info"><span class="dot"></span>READY</span></span></div>
+      </div>
+      <div class="disclaimer">
+        A window is scored only when 1000 consecutive samples are lead-on,
+        gap-free, unsaturated and contain a detectable heartbeat. A window that
+        fails is counted and discarded, never repaired.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Latest screening result</h2></div>
+      <div id="result" class="empty" style="padding:24px 8px">
+        <div class="ico">{{ icon('i-pulse', 22) }}</div>
+        <b>No window scored yet</b>
+        <p>The first clean ten-second window will be scored and stored automatically.</p>
+      </div>
+      <div class="disclaimer">{{ screening_note() }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if devices %}
+<script src="{{ url_for('static', filename='js/ecg.js') }}"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+<script>
+(function () {
+  var device = UI.$("device"), mode = UI.$("mode");
+
+  // The server owns the threshold values; the page only labels the choices
+  // with whatever it is told, so the two can never disagree.
+  function labelModes(thresholds) {
+    if (!thresholds) return;
+    Array.prototype.forEach.call(mode.options, function (o) {
+      if (thresholds[o.value] !== undefined) {
+        o.textContent = o.value + " (" + thresholds[o.value].toFixed(4) + ")";
+      }
+    });
+  }
+
+  var monitor = LiveMonitor.start({
+    poll: function () {
+      return UI.getJSON("{{ url_for('ecg.api_live') }}?device=" +
+                        encodeURIComponent(device.value) +
+                        "&mode=" + encodeURIComponent(mode.value));
+    },
+    adapt: function (d) {
+      labelModes(d.thresholds);
+      if (d.mode && mode.value !== d.mode) mode.value = d.mode;
+      var b = d.broker || {};
+      return {
+        connected: !!b.connected,
+        connectionText: b.connected ? "CONNECTED"
+                      : (b.enabled ? "DISCONNECTED" : "DISABLED"),
+        online: !!d.online,
+        electrodes: d.electrodes,
+        trace: d.trace, leadOffFlags: d.lead_off_flags,
+        signalOk: !!d.signal_ok, leadOff: !!d.lead_off,
+        diagnosis: d.diagnosis,
+        bpm: d.bpm, rateHz: d.rate_hz, samples: d.samples,
+        counters: "lost " + (d.lost_chunks || 0) +
+                  " · dup " + (d.duplicate_chunks || 0) +
+                  " · bad " + (d.malformed_chunks || 0),
+        windowProgress: d.window_progress, windowLength: d.window_length,
+        windowsDone: d.windows_done, windowsDiscarded: d.windows_discarded,
+        lastResult: d.last_result
+      };
+    }
+  });
+
+  device.addEventListener("change", monitor.tick);
+  mode.addEventListener("change", function () {
+    UI.toast("Operating point set to " + mode.value + ". It applies to the next window.", "info");
+    monitor.tick();
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

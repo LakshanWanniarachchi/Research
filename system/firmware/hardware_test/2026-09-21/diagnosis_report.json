@@ -1,0 +1,37 @@
+{
+  "port": "COM7",
+  "baud": 115200,
+  "elapsed_s": 15.47,
+  "samples": 1521,
+  "status_lines": 0,
+  "boot_or_other_text_lines": 0,
+  "malformed_lines": 0,
+  "sequence_gaps": 0,
+  "device_dt_us": {
+    "mean": 10000.0,
+    "sd": 0.0,
+    "min": 10000,
+    "max": 10000
+  },
+  "device_rate_hz": 100.0,
+  "pc_arrival_rate_hz": 100.033,
+  "pc_arrival_span_s": 15.195,
+  "lead_off_fraction": 0.4799,
+  "lo_plus_high_fraction": 0.4727,
+  "lo_minus_high_fraction": 0.4786,
+  "adc": {
+    "min": 0,
+    "max": 0,
+    "mean": 0.0,
+    "std": 0.0,
+    "rail_fraction": 1.0
+  },
+  "windows_completed": 0,
+  "windows_discarded": {
+    "lead_off": 726
+  },
+  "diagnosis": "ECG input reads 0 V - check AD8232 power (3.3V and GND)\nand the OUT -> VP (GPIO36) wire",
+  "last_status_lines": [],
+  "error": "",
+  "csv": null
+}

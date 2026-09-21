@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if patient %}{{ patient.name }}{% else %}Patient not found{% endif %} &middot; Patient record</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #0e1117; color: #e6edf3;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+
+  a.back { color: #58a6ff; font-size: 13px; text-decoration: none; }
+  a.back:hover { text-decoration: underline; }
+
+  header { border-bottom: 1px solid #30363d; padding-bottom: 14px; margin: 14px 0 20px; }
+  h1 { margin: 0 0 6px; font-size: 20px; }
+  .sub { color: #8b949e; font-size: 13px; }
+
+  .note {
+    background: #1c2128; border-left: 3px solid #d29922;
+    padding: 8px 12px; margin-top: 12px;
+    font-size: 12px; color: #c9d1d9; border-radius: 0 4px 4px 0;
+  }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  @media (max-width: 780px) { .tiles { grid-template-columns: 1fr 1fr; } }
+
+  .tile { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px 16px; }
+  .tile .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+    color: #8b949e; font-weight: 600; margin-bottom: 6px;
+  }
+  .tile .value { font-size: 22px; font-weight: 700; }
+  .tile .value.flag { color: #f85149; }
+
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .card h2 {
+    margin: 0 0 12px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .06em; color: #8b949e; font-weight: 600;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-weight: 600; }
+  .right { text-align: right; }
+  .ok  { color: #3fb950; }
+  .bad { color: #f85149; }
+  .muted { color: #8b949e; font-size: 12px; }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #21262d; color: #8b949e; }
+  code { background: #21262d; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="/">&larr; back to the dashboard</a>
+
+{% if not patient %}
+  <header><h1>Patient not found</h1>
+  <div class="sub">There is no patient with that id.</div></header>
+{% else %}
+
+  <header>
+    <h1>{{ patient.name }}</h1>
+    <div class="sub">
+      {% if patient.age %}{{ patient.age }} years{% else %}age not recorded{% endif %}
+      {% if patient.sex %}&middot; {{ patient.sex }}{% endif %}
+      &middot; device
+      {% if patient.device_id %}<code>{{ patient.device_id }}</code>{% else %}not assigned{% endif %}
+      &middot; enrolled {{ patient.created_at }}
+    </div>
+    <div class="note">
+      <strong>Illustrative demographics.</strong> The ECG signals and their
+      Normal/MI labels are real PTB-XL data, but the person they are filed under
+      here was entered by hand: PTB-XL's patient metadata (age, sex, clinical
+      report) is not part of the extracted dataset. This page demonstrates how
+      readings are attributed to a patient, not a real clinical record.
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="label">Readings</div>
+      <div class="value">{{ stats.total }}</div>
+    </div>
+    <div class="tile">
+      <div class="label">Flagged as MI</div>
+      <div class="value {% if stats.n_flagged_mi %}flag{% endif %}">{{ stats.n_flagged_mi }}</div>
+    </div>
+    <div class="tile">
+      <div class="label">Mean MI probability</div>
+      <div class="value">
+        {% if stats.avg_probability is not none %}{{ "%.3f"|format(stats.avg_probability) }}{% else %}&mdash;{% endif %}
+      </div>
+    </div>
+    <div class="tile">
+      <div class="label">Mean model time</div>
+      <div class="value">{{ stats.avg_inference_ms }} <span style="font-size:13px">ms</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Reading history</h2>
+    <div class="muted" style="margin-bottom:10px">
+      {% if stats.last_seen %}Last reading {{ stats.last_seen }}.{% else %}
+      No readings yet for this patient.{% endif %}
+      Showing up to 50, newest first.
+    </div>
+
+    {% if predictions %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>When</th><th>Source</th>
+          <th class="right">Prob.</th><th class="right">Threshold</th>
+          <th>Mode</th><th>Verdict</th><th>Truth</th><th class="right">ms</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in predictions %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td>{{ p.created_at }}</td>
+          <td><span class="tag">{{ p.source }}</span></td>
+          <td class="right">{{ "%.3f"|format(p.probability) }}</td>
+          <td class="right">{{ "%.3f"|format(p.threshold) }}</td>
+          <td class="muted">{{ p.mode }}</td>
+          <td class="{% if p.prediction %}bad{% else %}ok{% endif %}">
+            {% if p.prediction %}MI{% else %}Normal{% endif %}
+          </td>
+          <td>
+            {% if p.truth is none %}&mdash;
+            {% elif p.truth %}MI{% else %}Normal{% endif %}
+          </td>
+          <td class="right">{{ "%.0f"|format(p.inference_ms) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="muted">
+      Nothing recorded yet. Either take a simulated reading with this patient
+      selected on the dashboard, or point a device at
+      <code>POST /api/predict</code> with
+      <code>"device_id": "{{ patient.device_id or 'ESP32-001' }}"</code>.
+    </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+</div>
+</body>
+</html>

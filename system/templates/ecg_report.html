@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, result_badge, screening_note %}
+{% set active = 'history' %}
+{% set mi = report["prediction"] == 1 %}
+{% block title %}ECG report #{{ report["id"] }} &middot; ECG Screening System{% endblock %}
+
+{% block page_title %}ECG Report #{{ report["id"] }}{% endblock %}
+{% block crumb %}
+<div class="crumb">
+  {{ report["created_at"][:10] }} at {{ report["created_at"][11:19] }} &middot;
+  device <span class="mono">{{ report["device_id"] or "unknown" }}</span> &middot;
+  Lead {{ report["lead"] }}
+</div>
+{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ url_for('ecg.history') }}">{{ icon('i-history') }} Back to reports</a>
+<button class="btn no-print" type="button" onclick="window.print()">{{ icon('i-file') }} Print</button>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Recorded waveform &middot; Lead {{ report["lead"] }}, {{ report["sample_rate"] }} Hz</h2>
+    <span class="spacer"></span>
+    {{ result_badge(report["prediction"], long=true) }}
+  </div>
+
+  <div class="ecg-panel">
+    <canvas class="ecg" id="ecg" aria-label="Recorded ECG waveform"></canvas>
+    <div class="ecg-scale">
+      <span>1 major division = 1 s</span>
+      <span>{{ report["sample_rate"] }} Hz</span>
+      <span>y axis autoscaled raw ADC counts, not calibrated mV</span>
+    </div>
+  </div>
+  <div class="ecg-note">
+    Raw ADC counts exactly as recorded: {{ report["n_samples"] }} samples over
+    {{ "%.0f"|format(report["duration_s"]) }} seconds. The model reads this
+    signal after a per-window z-score and nothing else.
+  </div>
+</div>
+
+<div class="grid report">
+  {# --- the result ------------------------------------------------------ #}
+  <div class="card">
+    <div class="card-head"><h2>Screening result</h2></div>
+
+    <div class="result {{ 'mi' if mi else 'normal' }}">
+      <div class="headline">
+        <span class="prob">{{ "%.1f"|format(100 * report["probability"]) }}%</span>
+        {{ result_badge(report["prediction"], long=true) }}
+      </div>
+      <div class="meter {{ 'mi' if mi else '' }}">
+        <div class="track">
+          <div class="fill" style="width:{{ "%.1f"|format(100 * report['probability']) }}%"></div>
+          <div class="thr" style="left:{{ "%.1f"|format(100 * report['threshold']) }}%"
+               title="operating threshold"></div>
+        </div>
+        <div class="ends">
+          <span>0%</span>
+          <span>threshold {{ "%.4f"|format(report["threshold"]) }}</span>
+          <span>100%</span>
+        </div>
+      </div>
+      <div class="meta">
+        The probability of an MI pattern, judged against the
+        <strong>{{ report["mode"] }}</strong> experimental operating threshold.
+        {% if mi %}
+        Above the threshold, so this recording is flagged for assessment.
+        {% else %}
+        Below the threshold, so this recording is not flagged.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      {{ screening_note() }} The high-recall operating point is deliberately
+      easy to trigger and flags a substantial share of healthy recordings.
+    </div>
+
+    <details class="tech">
+      <summary>Technical details</summary>
+      <table class="kv">
+        <tr><th>Model</th><td>{{ report["model_name"] or "—" }}</td></tr>
+        <tr><th>Model version</th><td class="mono">{{ report["model_version"] or "—" }}</td></tr>
+        <tr><th>Operating point</th><td>{{ report["mode"] }}</td></tr>
+        <tr><th>Threshold</th><td class="mono">{{ "%.4f"|format(report["threshold"]) }}</td></tr>
+        <tr><th>MI probability</th><td class="mono">{{ "%.4f"|format(report["probability"]) }}</td></tr>
+        <tr><th>Inference time</th>
+          <td>{% if report["inference_ms"] %}{{ "%.0f"|format(report["inference_ms"]) }} ms{% else %}—{% endif %}</td></tr>
+      </table>
+    </details>
+  </div>
+
+  {# --- how it was recorded --------------------------------------------- #}
+  <div class="card">
+    <div class="card-head"><h2>Recording information</h2></div>
+    <table class="kv">
+      <tr><th>Recording ID</th><td class="mono">{{ report["id"] }}</td></tr>
+      <tr><th>Date</th><td>{{ report["created_at"][:10] }}</td></tr>
+      <tr><th>Time</th><td>{{ report["created_at"][11:19] }}</td></tr>
+      <tr><th>Duration</th><td>{{ "%.0f"|format(report["duration_s"]) }} s</td></tr>
+      <tr><th>Lead</th><td>{{ report["lead"] }}</td></tr>
+      <tr><th>Sampling rate</th>
+        <td>{{ report["sample_rate"] }} Hz declared
+          {%- if report["measured_rate"] %}<br>{{ "%.2f"|format(report["measured_rate"]) }} Hz measured{% endif %}</td></tr>
+      <tr><th>Samples</th><td>{{ report["n_samples"] }}</td></tr>
+      <tr><th>Device</th><td class="mono">{{ report["device_id"] or "—" }}</td></tr>
+      <tr><th>Transport</th><td>{{ "Wi-Fi / MQTT" if report["source"] == "mqtt" else "USB serial" }}</td></tr>
+      <tr><th>Heart rate</th>
+        <td>{% if report["bpm"] %}{{ "%.0f"|format(report["bpm"]) }} bpm{% else %}—{% endif %}</td></tr>
+      <tr><th>Rhythm regularity</th>
+        <td class="mono">{{ "%.2f"|format(report["beat_strength"] or 0) }}</td></tr>
+      {% if quality %}
+      <tr><th>Signal range</th>
+        <td class="mono">{{ quality.get("min", "—") }}–{{ quality.get("max", "—") }} counts</td></tr>
+      <tr><th>Saturated samples</th>
+        <td>{{ "%.1f"|format(100 * (quality.get("rail_fraction") or 0)) }}%</td></tr>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ecg.js') }}"></script>
+<script>
+var SIGNAL = {{ signal | tojson }};
+ECG.bind(UI.$("ecg"), function () { return SIGNAL; },
+         function () { return { seconds: {{ report["duration_s"] }} }; });
+</script>
+{% endblock %}

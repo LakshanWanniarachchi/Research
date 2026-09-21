@@ -1,0 +1,40 @@
+{
+  "port": "COM7",
+  "baud": 115200,
+  "elapsed_s": 31.24,
+  "samples": 3099,
+  "status_lines": 0,
+  "boot_or_other_text_lines": 0,
+  "malformed_lines": 0,
+  "sequence_gaps": 0,
+  "device_dt_us": {
+    "mean": 10000.0,
+    "sd": 0.492,
+    "min": 9999,
+    "max": 10001
+  },
+  "device_rate_hz": 100.0,
+  "pc_arrival_rate_hz": 100.001,
+  "pc_arrival_span_s": 30.98,
+  "lead_off_fraction": 0.0,
+  "lo_plus_high_fraction": 0.0,
+  "lo_minus_high_fraction": 0.0,
+  "adc": {
+    "min": 2197,
+    "max": 2957,
+    "mean": 2564.6,
+    "std": 180.4,
+    "rail_fraction": 0.0
+  },
+  "windows_completed": 0,
+  "windows_discarded": {
+    "no_heartbeat": 3
+  },
+  "diagnosis": "No heartbeat found - signal present but not an ECG.\nCheck electrode placement, skin contact and gel",
+  "last_status_lines": [],
+  "error": "",
+  "csv": null,
+  "model": "1D CNN ensemble (5 models, mean of their probabilities)",
+  "predictions": [],
+  "disclaimer": "Experimental research screening result - not a clinical diagnosis."
+}

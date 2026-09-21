@@ -1,0 +1,134 @@
+/*
+ * theme.css - design tokens, reset, typography.
+ *
+ * One place where a colour, a radius or a step of spacing is decided. Nothing
+ * else in the application may invent its own: a page that needs a green has
+ * to use var(--success), so "healthy" looks the same on the dashboard, the
+ * live monitor and a stored report.
+ *
+ * The palette is deliberately quiet. This is an instrument that reports a
+ * screening probability about someone's heart, and a saturated interface
+ * would lend those numbers a confidence the model has not earned.
+ */
+
+:root {
+  /* --- brand ------------------------------------------------------------ */
+  --primary:        #0d63ad;
+  --primary-strong: #0a4c86;
+  --primary-soft:   #eaf2fa;
+  --primary-line:   #c3dbf1;
+
+  /* --- status ----------------------------------------------------------- */
+  --success:        #0f7a4a;
+  --success-soft:   #e8f5ee;
+  --success-line:   #bfe0cd;
+  --warning:        #92620f;
+  --warning-soft:   #fdf4e3;
+  --warning-line:   #edd9ac;
+  --danger:         #b42318;
+  --danger-soft:    #fdeceb;
+  --danger-line:    #f3c8c4;
+  --idle:           #64748b;
+  --idle-soft:      #eef1f5;
+  --idle-line:      #dde3ea;
+
+  /* --- neutrals --------------------------------------------------------- */
+  --bg:             #f4f7fa;
+  --surface:        #ffffff;
+  --surface-sunken: #f8fafc;
+  --surface-ink:    #10202e;   /* the ECG panel, the only dark surface */
+
+  --text:           #11212f;
+  --text-2:         #45596b;
+  --muted:          #6d7f8f;
+  --on-dark:        #e6eef5;
+  --on-dark-muted:  #8aa0b4;
+
+  --border:         #e2e8f0;
+  --border-strong:  #cbd5e1;
+
+  /* --- spacing scale ---------------------------------------------------- */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 20px; --s6: 24px; --s7: 32px; --s8: 44px;
+
+  /* --- shape ------------------------------------------------------------ */
+  --r-sm: 6px;
+  --r:    10px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgba(16, 32, 46, .05), 0 1px 3px rgba(16, 32, 46, .04);
+  --shadow-2: 0 2px 6px rgba(16, 32, 46, .07), 0 8px 24px rgba(16, 32, 46, .06);
+
+  /* --- type scale ------------------------------------------------------- */
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+          Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+
+  --t-page:    22px;   /* page title            */
+  --t-section: 17px;   /* section heading       */
+  --t-card:    12.5px; /* card label, uppercase */
+  --t-body:    14.5px;
+  --t-small:   13px;
+  --t-caption: 12px;
+
+  --sidebar-w: 244px;
+  --topbar-h:  60px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { line-height: 1.3; margin: 0; font-weight: 640; }
+p { margin: 0 0 var(--s3); }
+p:last-child { margin-bottom: 0; }
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* A focus ring that is visible on every surface, including the dark ECG
+   panel. Removing it would make the application unusable by keyboard. */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* --- small shared utilities --------------------------------------------- */
+.mono { font-family: var(--mono); font-size: .94em; }
+.muted { color: var(--muted); }
+.caption { font-size: var(--t-caption); color: var(--muted); }
+.small { font-size: var(--t-small); }
+.right { text-align: right; }
+.nowrap { white-space: nowrap; }
+.stack > * + * { margin-top: var(--s3); }
+.row { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.spacer { margin-left: auto; }
+.hidden { display: none !important; }
+
+/* Visible to a screen reader, not on screen. Used for the labels that carry
+   a status where the eye reads a coloured dot. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}

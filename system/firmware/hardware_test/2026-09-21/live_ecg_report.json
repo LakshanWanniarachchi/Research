@@ -1,0 +1,125 @@
+{
+  "port": "COM7",
+  "baud": 115200,
+  "elapsed_s": 41.05,
+  "samples": 4056,
+  "status_lines": 0,
+  "boot_or_other_text_lines": 1,
+  "malformed_lines": 0,
+  "sequence_gaps": 1,
+  "device_dt_us": {
+    "mean": 10000.0,
+    "sd": 0.0,
+    "min": 10000,
+    "max": 10000
+  },
+  "device_rate_hz": 100.0,
+  "pc_arrival_rate_hz": 99.954,
+  "pc_arrival_span_s": 40.569,
+  "lead_off_fraction": 0.0,
+  "lo_plus_high_fraction": 0.0,
+  "lo_minus_high_fraction": 0.0,
+  "adc": {
+    "min": 1798,
+    "max": 2374,
+    "mean": 2128.3,
+    "std": 49.9,
+    "rail_fraction": 0.0
+  },
+  "windows_completed": 3,
+  "windows_discarded": {
+    "sequence_gap": 1
+  },
+  "diagnosis": "Signal available - beat 77 bpm (strength 1.00)",
+  "last_status_lines": [],
+  "error": "",
+  "csv": "C:\\Users\\laksh\\OneDrive\\Desktop\\reserch new\\Reserch-20260921T053852Z-1-001\\Reserch\\system\\recordings\\REC-20260923-180645.csv",
+  "model": "1D CNN ensemble (5 models, mean of their probabilities)",
+  "predictions": [
+    {
+      "first_seq": 84544,
+      "measured_rate_hz": 100.0,
+      "input_shape": [
+        1,
+        1000,
+        1
+      ],
+      "probability": 0.3034,
+      "threshold": 0.2736,
+      "mode": "high_recall",
+      "prediction": 1,
+      "label": "MI PATTERN",
+      "inference_ms": 4357.6,
+      "warmup": true,
+      "quality": {
+        "n": 1000,
+        "min": 1810,
+        "max": 2358,
+        "mean": 2128.6,
+        "std": 48.8,
+        "rail_fraction": 0.0,
+        "saturated": false,
+        "flat": false,
+        "bpm": 76.9,
+        "beat_strength": 1.0
+      }
+    },
+    {
+      "first_seq": 85544,
+      "measured_rate_hz": 100.0,
+      "input_shape": [
+        1,
+        1000,
+        1
+      ],
+      "probability": 0.4324,
+      "threshold": 0.2736,
+      "mode": "high_recall",
+      "prediction": 1,
+      "label": "MI PATTERN",
+      "inference_ms": 511.2,
+      "warmup": false,
+      "quality": {
+        "n": 1000,
+        "min": 1858,
+        "max": 2343,
+        "mean": 2119.1,
+        "std": 44.7,
+        "rail_fraction": 0.0,
+        "saturated": false,
+        "flat": false,
+        "bpm": 80.0,
+        "beat_strength": 1.0
+      }
+    },
+    {
+      "first_seq": 86776,
+      "measured_rate_hz": 100.0,
+      "input_shape": [
+        1,
+        1000,
+        1
+      ],
+      "probability": 0.3907,
+      "threshold": 0.2736,
+      "mode": "high_recall",
+      "prediction": 1,
+      "label": "MI PATTERN",
+      "inference_ms": 578.8,
+      "warmup": false,
+      "quality": {
+        "n": 1000,
+        "min": 1798,
+        "max": 2336,
+        "mean": 2119.8,
+        "std": 49.8,
+        "rail_fraction": 0.0,
+        "saturated": false,
+        "flat": false,
+        "bpm": 81.1,
+        "beat_strength": 1.0
+      }
+    }
+  ],
+  "disclaimer": "Experimental research screening result - not a clinical diagnosis."
+}
