@@ -1,41 +1,3 @@
-"""
-MQTT bridge  -  receiving readings from devices over the internet
-================================================================
-
-    AD8232 -> ESP32 --WiFi--> [ MQTT broker ] --> this bridge -> 1D CNN -> SQLite
-                                                        ^^^^ this file
-
-Why MQTT rather than the HTTP endpoint
---------------------------------------
-The existing /api/predict endpoint needs the device to reach the server
-directly. That works on a home network and stops working the moment the server
-is behind a router, which it always is. MQTT inverts the direction: both the
-device and the server open OUTBOUND connections to a broker, so neither needs a
-public address or a forwarded port. It also keeps working when a device drops
-off WiFi mid-transmission, because the broker holds the connection state rather
-than the application.
-
-The trade is an extra component that has to be running. If the broker is down,
-readings are not delayed, they are lost, unless the device buffers them. That
-limitation is stated in the thesis rather than hidden.
-
-Topics
-------
-    ecg/<device_id>/reading    device  -> server   a 10-second window
-    ecg/<device_id>/result     server  -> device   the verdict
-    ecg/<device_id>/status     device  -> server   online / offline (retained)
-
-A wildcard subscription to ecg/+/reading picks up every device without the
-server needing to know in advance which devices exist.
-
-Design note: transport and logic are separated
-----------------------------------------------
-`handle_reading()` takes bytes and returns a dict. It touches no network, so it
-can be tested exhaustively without a broker running. The paho client is a thin
-shell around it. Mixing the two would mean the only way to test a malformed
-payload was to stand up a broker and publish to it.
-"""
-
 import json
 import os
 import threading
@@ -107,8 +69,7 @@ def parse_payload(raw, input_length=None):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise PayloadError("payload is not valid UTF-8 JSON") from exc
 
-    if not isinstance(body, dict):
-        raise PayloadError("payload must be a JSON object")
+
 
     signal = body.get("signal")
     if not isinstance(signal, list):

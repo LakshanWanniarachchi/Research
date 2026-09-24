@@ -167,7 +167,7 @@ def preprocess_many(X):
         b, a = butter(BANDPASS_ORDER,
                       [BANDPASS_LOW_HZ / nyquist, BANDPASS_HIGH_HZ / nyquist],
                       btype="band")
-
+        X = filtfilt(b, a, X, axis=1).astype(np.float32)
 
     mean = X.mean(axis=1, keepdims=True)
     std = X.std(axis=1, keepdims=True) + 1e-8
