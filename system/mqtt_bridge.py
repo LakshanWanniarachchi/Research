@@ -69,7 +69,8 @@ def parse_payload(raw, input_length=None):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise PayloadError("payload is not valid UTF-8 JSON") from exc
 
-
+    if not isinstance(body, dict):
+        raise PayloadError("payload must be a JSON object")
 
     signal = body.get("signal")
     if not isinstance(signal, list):

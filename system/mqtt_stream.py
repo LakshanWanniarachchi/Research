@@ -1,25 +1,4 @@
-"""
-Reassembling an ECG from MQTT chunks
-====================================
 
-    ESP32 --Wi-Fi--> broker --> mqtt_bridge --> [ this module ] --> model.py
-
-The device publishes one second of samples at a time (see
-firmware/ecg_esp32_mqtt). This module turns that stream of chunks back into a
-continuous signal per device, keeps the last ten seconds for the live display,
-and hands complete ten-second windows to a scorer.
-
-What it deliberately does NOT do is repair the signal. A lost chunk leaves a
-hole in a physiological recording, and filling it with zeros, with the previous
-value, or with an interpolation would produce a waveform that looks plausible
-and never happened. Missing data is counted and the affected window is thrown
-away instead.
-
-The window rules themselves are not re-implemented here: `WindowBuilder`,
-`diagnose`, `detect_beat` and `signal_quality` are imported from
-`ecg_serial_monitor`, so the USB path and the MQTT path cannot drift apart
-about what counts as a scoreable window.
-"""
 
 import collections
 import json
@@ -73,9 +52,7 @@ def parse_chunk(raw, expect_device=None):
     device_id = body.get("device_id")
     if not isinstance(device_id, str) or not device_id:
         raise ChunkError("missing 'device_id'")
-    if expect_device is not None and device_id != expect_device:
-        raise ChunkError(f"device_id '{device_id}' does not match topic "
-                         f"'{expect_device}'")
+
 
     for field in ("seq", "t_us", "n"):
         if not isinstance(body.get(field), int) or isinstance(body.get(field), bool):
