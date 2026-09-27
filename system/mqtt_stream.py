@@ -60,7 +60,9 @@ def parse_chunk(raw, expect_device=None):
         if not isinstance(body.get(field), int) or isinstance(body.get(field), bool):
             raise ChunkError(f"'{field}' must be an integer")
 
-
+    fs = body.get("fs", FS_HZ)
+    if fs != FS_HZ:
+        raise ChunkError(f"chunk says {fs} Hz, this system expects {FS_HZ} Hz")
 
     adc = body.get("adc")
     if not isinstance(adc, list):
