@@ -52,15 +52,15 @@ def parse_chunk(raw, expect_device=None):
     device_id = body.get("device_id")
     if not isinstance(device_id, str) or not device_id:
         raise ChunkError("missing 'device_id'")
-
+    if expect_device is not None and device_id != expect_device:
+        raise ChunkError(f"device_id '{device_id}' does not match topic "
+                         f"'{expect_device}'")
 
     for field in ("seq", "t_us", "n"):
         if not isinstance(body.get(field), int) or isinstance(body.get(field), bool):
             raise ChunkError(f"'{field}' must be an integer")
 
-    fs = body.get("fs", FS_HZ)
-    if fs != FS_HZ:
-        raise ChunkError(f"chunk says {fs} Hz, this system expects {FS_HZ} Hz")
+
 
     adc = body.get("adc")
     if not isinstance(adc, list):
