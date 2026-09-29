@@ -142,13 +142,7 @@ class DeviceStream:
                     self.n_duplicates += 1
                     return None
 
-            if self.last_seq is not None:
-                missing = seq - self.last_seq - 1
-                if missing > 0:
-                    self.n_lost_chunks += missing
-                    self.windows.reset("chunk_gap")
-                    self.events.appendleft(
-                        {"at": now, "event": "chunk_gap", "value": missing})
+
 
             self.last_seq = seq
             self.n_chunks += 1
